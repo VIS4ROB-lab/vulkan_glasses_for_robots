@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+	<node name="vrglasses_for_robots" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen" args="--resource_folder=$(find vrglasses_for_robots)/shaders">
+		<remap from="odometry" to="odometry_sensor1/odometry" />
+		<param name="shader_folder" value="$(find vrglasses_for_robots)/shaders" />
+	</node>
+</launch>
