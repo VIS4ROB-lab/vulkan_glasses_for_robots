@@ -1,7 +1,15 @@
 <?xml version="1.0"?>
 <launch>
-	<node name="vrglasses_for_robots" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen" args="--resource_folder=$(find vrglasses_for_robots)/shaders">
-		<remap from="odometry" to="odometry_sensor1/odometry" />
+
+  <arg name="mav_name" default="firefly"/>
+  <arg name="enable_logging" default="false" />
+  <arg name="log_file" default="$(arg mav_name)" />
+
+  <group ns="$(arg mav_name)">
+	<node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
+		<remap from="odometry" to="ground_truth/odometry" />
 		<param name="shader_folder" value="$(find vrglasses_for_robots)/shaders" />
+		<param name="framerate" value="20.0" />
 	</node>
+  </group>
 </launch>

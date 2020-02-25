@@ -156,7 +156,7 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
 
   VkPhysicalDeviceProperties deviceProperties;
   vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
-  LOG(INFO) << "GPU: " << deviceProperties.deviceName << "\n";
+  std::cout << "GPU: " << deviceProperties.deviceName << "\n";
 
   // Request a single graphics queue
   const float defaultQueuePriority(0.0f);
@@ -1177,7 +1177,7 @@ vrglasses_for_robots::VulkanRenderer::VulkanRenderer(
       near_(near),
       max_landmark_count_(max_landmark_count),
       max_indice_count_(max_indice_count) {
-  LOG(INFO) << "Running headless rendering example\n";
+    std::cout << "Running headless rendering example\n";
 
   initVulkan(true);
 

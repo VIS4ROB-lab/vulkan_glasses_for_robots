@@ -28,7 +28,7 @@ typedef std::vector<float> VecQuality;
 #include <vulkan/vulkan.h>
 #include <vrglasses_for_robots/VulkanTools.h>
 
-//#define DEBUG (!NDEBUG) //enable validation layers
+#define DEBUG (!NDEBUG) //enable validation layers
 
 #define BUFFER_ELEMENTS 32
 
@@ -36,7 +36,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageCallback(
     VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
     uint64_t object, size_t location, int32_t messageCode,
     const char* pLayerPrefix, const char* pMessage, void* pUserData) {
-  LOG(ERROR) << "[VALIDATION]: " << pLayerPrefix << " - " << pMessage << "\n";
+    std::cout << "[VALIDATION]: " << pLayerPrefix << " - " << pMessage << "\n";
   return VK_FALSE;
 }
 
