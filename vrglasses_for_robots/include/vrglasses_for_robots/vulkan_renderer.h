@@ -28,7 +28,7 @@ typedef std::vector<float> VecQuality;
 #include <vulkan/vulkan.h>
 #include <vrglasses_for_robots/VulkanTools.h>
 
-#define DEBUG (!NDEBUG) //enable validation layers
+//#define DEBUG (!NDEBUG) //enable validation layers
 
 #define BUFFER_ELEMENTS 32
 

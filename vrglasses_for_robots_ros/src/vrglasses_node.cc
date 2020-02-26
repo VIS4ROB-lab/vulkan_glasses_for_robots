@@ -58,23 +58,20 @@ VRGlassesNode::~VRGlassesNode(){
 }
 
 void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
-{
-    //std::cout << msg.pose.pose.position.x << std::endl;
+{    
     if( msg.header.stamp - last_frame_time_ >= diff_frames_)
     {
-        //std::cout << "######"  << std::endl;
         last_frame_time_ = msg.header.stamp;
         glm::mat4 mvp = computeMVP(msg.pose.pose);
         renderer_->setCamera(mvp);
         renderer_->renderMesh(result_depth_map_, result_rgbs_map_);
 
         cv::Mat out[] = { result_rgb_map_,result_s_map_ };
-        int from_to[] = { 0,0, 1,1, 2,2, 3,3 };
+        int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
         cv::mixChannels(&result_rgbs_map_,1,out,2,from_to,4);
         sensor_msgs::ImagePtr rgb_msg;
         rgb_msg = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_).toImageMsg();
         color_pub_.publish(rgb_msg);
-        cv::imshow("RGB",result_rgb_map_);
 
         sensor_msgs::ImagePtr semantic_msg;
         semantic_msg = cv_bridge::CvImage(msg.header, "mono8", result_s_map_).toImageMsg();
@@ -83,8 +80,6 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         sensor_msgs::ImagePtr depth_msg;
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
         depth_pub_.publish(depth_msg);
-        cv::waitKey(1);
-
     }
 }
 
