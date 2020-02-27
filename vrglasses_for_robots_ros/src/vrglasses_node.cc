@@ -5,6 +5,7 @@
 #include <opencv2/highgui.hpp>
 #include <ros/console.h>
 #include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/PointCloud.h>
 
 
 
@@ -17,6 +18,9 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     depth_pub_ = image_transport_.advertise("depth_map", 1);
     color_pub_ = image_transport_.advertise("color_map", 1);
     semantic_pub_ = image_transport_.advertise("semantic_map", 1);
+
+    dense_pointcloud_pub_ =
+            nh_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5);
 
     result_rgb_map_.create(visim_project_.h,visim_project_.w,CV_8UC3);
     result_s_map_.create(visim_project_.h,visim_project_.w,CV_8UC1);
@@ -43,8 +47,9 @@ void VRGlassesNode::run()
 
     cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
 
-    renderer_->loadMesh("/media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj","/media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga");
-
+    renderer_->loadMesh("/home/lucas/Pictures/inverney.obj","/home/lucas/Downloads/inveraray-castle-rawscan/source/inveraray/inveraray.tga");
+///media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj
+/// /media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga
     while (::ros::ok()) {
         ::ros::spinOnce();
     }
@@ -80,112 +85,72 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         sensor_msgs::ImagePtr depth_msg;
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
         depth_pub_.publish(depth_msg);
+
+        publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
     }
 }
 
+void VRGlassesNode::publishDenseSemanticCloud(const ::std_msgs::Header header, const sensor_msgs::ImagePtr &depth_map, const cv::Mat &semantic_map)
+{
+    cv_bridge::CvImageConstPtr cv_ptr;
+    try
+    {
+      cv_ptr = cv_bridge::toCvShare(depth_map);
+    }
+    catch (cv_bridge::Exception& e)
+    {
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+    }
 
-//bool VisimProcessor::initialization(const std::string &visim_project_folder, const std::string &camera_id, const std::string &output_folder_path, int step) {
-//    if (!boost::filesystem::exists(output_folder_path)) {
-//        if (!boost::filesystem::create_directories(output_folder_path)) {
-//            LOG(ERROR) << "the output folder could not be created :"
-//                       << output_folder_path.c_str();
-//            return false;
-//        }
-//    } else {
-//        LOG(ERROR)
-//                << "the output folder already exist - please delete it or "
-//                   "change the arg:"
-//                << output_folder_path.c_str();
-//        // return false;
-//    }
+    sensor_msgs::PointCloud labelled_pointcloud;
+    labelled_pointcloud.header = header;
 
-//    visim_data_source_ = DataSource::Create(visim_project_folder, camera_id);
+    sensor_msgs::ChannelFloat32 quality_channel;
+    quality_channel.name = "quality";
 
-//    if (!visim_data_source_) {
-//        LOG(ERROR) << "could not open visim data project";
-//        return false;
-//    }
+    float* data = (float*)cv_ptr->image.data;
+    for (int u = 0; u < cv_ptr->image.cols; u += 4)
+    {
+      for (int v = 0; v < cv_ptr->image.rows; v += 4)
+      {
+        float val = data[v * cv_ptr->image.cols + u];
+        float semantic_val = semantic_map.at<uchar>(v,u)/255.0;
+        if (std::isfinite(val))
+        {
 
-//    boost::filesystem::path output_path_sparse = output_folder_path;
+          geometry_msgs::Point32 p_C_msg;
+          p_C_msg.x = val * (u - visim_project_.cx) / visim_project_.f;
+          p_C_msg.y = val * (v - visim_project_.cy) / visim_project_.f;
+          p_C_msg.z = val;
 
+          quality_channel.values.push_back(semantic_val);
+          labelled_pointcloud.points.push_back(p_C_msg);
+        }
+      }
+    }
 
-//    return true;
-//}
+    // Now add the channel indicating the quality
+    labelled_pointcloud.channels.push_back(quality_channel);
 
-
-//void VisimProcessor::runHeadless()
-//{
-//    VisimProject project =  visim_data_source_->getProject();
-//    double near = 0.1, far = 100.0;
-//    vrglasses_for_robots::VulkanRenderer app = vrglasses_for_robots::VulkanRenderer(project.w,project.h,near,far);
-//    cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
-
-//    app.loadMesh("/media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj","/media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga");
-
-//    try {
-//        size_t count = 0;
-//        glm::mat4 empty;
-
-//        buildOpenglProjectionFromIntrinsics(perpective_,empty,project.w,project.h,project.f,project.f,0,project.cx,project.cy,near,far);
-//        while(count < 1000){
-//            DataEntry current = visim_data_source_->at(count);
-//            std::cout << current.sequence << std::endl;
-//            glm::mat4 mvp = computeMVP(current);
-//            app.setCamera(mvp);
-//            cv::Mat show_img, channels[4];
-//            app.renderMesh(result_depth_map, result_semantic_map);
-//            cv::split(result_semantic_map,channels);
-//            //cv::imshow("RGB",result_semantic_map);
-//            //cv::imshow("Semantics",channels[3]);
-//            if (1)
-//            {
-//                    double min_depth = 0, max_depth = 30;
-//                    //cv::minMaxLoc(mesh_depth_image, &min_depth, &max_depth);
-
-//                    result_depth_map.convertTo(
-//                        show_img, CV_8U, 255.0 / (max_depth - min_depth),
-//                        -min_depth * 255.0 / (max_depth - min_depth));
-//                    //cv::imshow("depth map render", show_img);
-//                    //LOG(INFO) << "rende " << min_depth << " / " << max_depth << " - "
-//                    //          << okvis_reader.getNextId() << " / " << okvis_reader.size();
-//            }
-//            count = (count +1) % visim_data_source_->size();
-//            //cv::waitKey(1);
-//        }
-//    } catch (const std::exception& e) {
-//        std::cerr << e.what() << std::endl;
-//        return;
-//    }
-//}
+    // Publish the pointcloud
+    dense_pointcloud_pub_.publish(labelled_pointcloud);
+  }
 
 
 
 glm::mat4 VRGlassesNode::computeMVP(const geometry_msgs::Pose &pose)
 {
-        Eigen::Vector3d p_WS(pose.position.x, pose.position.y, pose.position.z);
+    Eigen::Vector3d p_WS(pose.position.x, pose.position.y, pose.position.z);
 
-        Eigen::Quaterniond q_WS;
-        q_WS.x() = pose.orientation.x;
-        q_WS.y() = pose.orientation.y;
-        q_WS.z() = pose.orientation.z;
-        q_WS.w() = pose.orientation.w;;
+    Eigen::Quaterniond q_WS;
+    q_WS.x() = pose.orientation.x;
+    q_WS.y() = pose.orientation.y;
+    q_WS.z() = pose.orientation.z;
+    q_WS.w() = pose.orientation.w;;
 
-        kindr::minimal::QuatTransformation T_WC =
-                kindr::minimal::QuatTransformation(p_WS, q_WS) * visim_project_.T_SC;
-
-//    Eigen::Vector3d p_WS(16.0169, 10.601, 23.9317);
-
-//    Eigen::Quaterniond q_WS;
-//    q_WS.x() = -0.392015;
-//    q_WS.y() = -0.839755;
-//    q_WS.z() = 0.344885;
-//    q_WS.w() = 0.148966;
-
-//    kindr::minimal::QuatTransformation T_WC =
-//            kindr::minimal::QuatTransformation( q_WS,p_WS);// * visim_project_.T_SC;
-
-    glm::mat4 mvp_fix = glm::mat4(-0.571972, 1.187686, -0.620847, -0.619607, 1.066311, 0.619799, -0.340906, -0.340225, -0.013738, -1.341432, -0.708759, -0.707343, 3.019675, 7.037336, 30.097649, 30.237314);
-
+    kindr::minimal::QuatTransformation T_WC =
+            kindr::minimal::QuatTransformation(p_WS, q_WS) * visim_project_.T_SC;
 
 
     kindr::minimal::QuatTransformation T_CW_cv = T_WC.inverse();

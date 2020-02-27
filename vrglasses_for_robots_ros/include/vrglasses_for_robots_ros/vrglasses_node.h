@@ -43,6 +43,7 @@ private:
 
     image_transport::Publisher color_pub_;
     //image_transport::ImageTransport rgb_imt_;
+    ros::Publisher dense_pointcloud_pub_;
 
     image_transport::Publisher semantic_pub_;
     //image_transport::ImageTransport semantic_imt_;
@@ -54,6 +55,8 @@ private:
 
 
     void odomCallback(const nav_msgs::Odometry &msg);
+
+    void publishDenseSemanticCloud(const std_msgs::Header header, const sensor_msgs::ImagePtr &depth_map, const cv::Mat& semantic_map);
 
     // rendering
     vrglasses_for_robots::VulkanRenderer* renderer_;
