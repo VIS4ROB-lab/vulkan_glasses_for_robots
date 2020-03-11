@@ -47,7 +47,7 @@ void VRGlassesNode::run()
 
     cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
 
-    renderer_->loadMesh("/home/lucas/Pictures/inverney.obj","/home/lucas/Downloads/inveraray-castle-rawscan/source/inveraray/inveraray.tga");
+    renderer_->loadMesh("/media/secssd/dataset/vrglasses/inveraray/inveraray.obj","/media/secssd/dataset/vrglasses/inveraray/inveraray.tga");
 ///media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj
 /// /media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga
     while (::ros::ok()) {
@@ -86,7 +86,7 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
         depth_pub_.publish(depth_msg);
 
-        publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
+        //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
     }
 }
 
