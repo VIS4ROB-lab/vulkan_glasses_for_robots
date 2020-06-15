@@ -127,6 +127,8 @@ class VulkanRenderer {
 
   uint32_t width_, height_;
   std::string filename_texture_;
+  std::string shader_vert_spv_;
+  std::string shader_frag_spv_;
   float far_, near_;
   /*
      Create framebuffer attachments
@@ -221,6 +223,12 @@ class VulkanRenderer {
 public:
   VulkanRenderer(
       uint32_t width, uint32_t height, float near, float far,
+      const std::string& shader_vert_spv =
+          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
+          "vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv",
+      const std::string& shader_frag_spv =
+          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
+          "vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv",
       size_t max_landmark_count = 1000, size_t max_indice_count = 3000);
 
   void setCamera(

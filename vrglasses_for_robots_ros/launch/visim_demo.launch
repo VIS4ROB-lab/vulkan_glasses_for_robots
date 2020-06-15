@@ -1,15 +1,17 @@
 <?xml version="1.0"?>
 <launch>
 
-  <arg name="mav_name" default="firefly"/>
+  <arg name="mav_name"       default="firefly"/>
   <arg name="enable_logging" default="false" />
-  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="log_file"       default="$(arg mav_name)" />
 
   <group ns="$(arg mav_name)">
-	<node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
-		<remap from="odometry" to="vi_sensor/ground_truth/odometry" />
-		<param name="shader_folder" value="$(find vrglasses_for_robots)/shaders" />
-		<param name="framerate" value="20.0" />
-	</node>
+	  <node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
+	  	<remap from="odometry"         to="vi_sensor/ground_truth/odometry" />
+  		<param name="framerate"        value="20.0" />
+	  	<param name="filename_obj"     value="/home/luca/dataset/vr_planner/inveraray_castle/inveraray.obj" />
+  		<param name="filename_texture" value="/home/luca/dataset/vr_planner/inveraray_castle/inveraray.tga" />
+	  	<param name="shader_folder"    value="$(find vrglasses_for_robots)/shaders" />
+  	</node>
   </group>
 </launch>

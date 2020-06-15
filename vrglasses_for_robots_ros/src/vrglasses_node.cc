@@ -11,7 +11,7 @@
 
 
 VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private): nh_(nh), nh_private_(nh_private),
-    image_transport_(nh_private_){
+    image_transport_(nh_private_), initialized_(false) {
     renderer_ = nullptr;
     odom_sub_ = nh_.subscribe("odometry", 500, &VRGlassesNode::odomCallback, this);
 
@@ -25,33 +25,53 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     result_rgb_map_.create(visim_project_.h,visim_project_.w,CV_8UC3);
     result_s_map_.create(visim_project_.h,visim_project_.w,CV_8UC1);
 
-
-
+    // Parameters
     double framerate;
-
-    if(!nh_private_.getParam("framerate", framerate))
-    {
-        framerate = 20;
-        ROS_WARN("framerate parameter not found, using default(20)");
+    if (!nh_private_.getParam("framerate", framerate)) {
+      framerate = 20;
+      ROS_WARN("framerate parameter not found, using default(20)");
     }
-    diff_frames_.fromSec(1.0/framerate);
+    diff_frames_.fromSec(1.0 / framerate);
     last_frame_time_ = ros::Time::now();
 
+    // Mesh
+    if (!nh_private_.getParam("filename_obj", filename_obj_)) {
+      ROS_ERROR("OBJ filename not found, aborting...");
+      return;
+    }
+
+    if (!nh_private_.getParam("filename_texture", filename_texture_)) {
+      ROS_ERROR("Texture filename not found, aborting...");
+      return;
+    }
+
+    if (!nh_private_.getParam("shader_folder", shader_folder_)) {
+      ROS_ERROR("Shader folder not found, aborting...");
+      return;
+    }
+
+    // Initialization is fine
+    initialized_ = true;
 }
 
 void VRGlassesNode::run()
 {
-    renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w,visim_project_.h,near_,far_);
+    std::string shader_vert_spv =
+        shader_folder_ + "/vrglasses4robots_shader.vert.spv";
+    std::string shader_frag_spv =
+        shader_folder_ + "/vrglasses4robots_shader.frag.spv";
+    renderer_ = new vrglasses_for_robots::VulkanRenderer(
+          visim_project_.w, visim_project_.h, near_, far_, shader_vert_spv,
+          shader_frag_spv);
+
     glm::mat4 empty;
-    buildOpenglProjectionFromIntrinsics(perpective_,empty,visim_project_.w,visim_project_.h,visim_project_.f,visim_project_.f,0,visim_project_.cx,visim_project_.cy,near_,far_);
-
-    cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
-
-    renderer_->loadMesh("/home/lucas/Pictures/inverney.obj","/home/lucas/Downloads/inveraray-castle-rawscan/source/inveraray/inveraray.tga");
-///media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj
-/// /media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga
+    buildOpenglProjectionFromIntrinsics(perpective_, empty, visim_project_.w,
+                                        visim_project_.h, visim_project_.f,
+                                        visim_project_.f, 0, visim_project_.cx,
+                                        visim_project_.cy, near_, far_);
+    renderer_->loadMesh(filename_obj_, filename_texture_);
     while (::ros::ok()) {
-        ::ros::spinOnce();
+      ::ros::spinOnce();
     }
 }
 

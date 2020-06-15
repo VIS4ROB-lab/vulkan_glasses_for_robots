@@ -28,12 +28,18 @@ public:
     void run();
     ~VRGlassesNode();
 
+    bool initialized() const { return initialized_; }
+
 private:
 
     //parameters
     ros::Duration diff_frames_;
     ros::Time last_frame_time_;
 
+    std::string filename_obj_;
+    std::string filename_texture_;
+    std::string shader_folder_;
+    bool initialized_;
 
     // ros
     ::ros::NodeHandle nh_;

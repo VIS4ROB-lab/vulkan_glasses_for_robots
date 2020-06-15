@@ -484,9 +484,9 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
     shaderStages[1].pName = "main";
 
     shaderStages[0].module =
-        vks::tools::loadShader("/media/secssd/catkin_ws/src/vrglasses_for_robots/vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv", device);
+        vks::tools::loadShader(shader_vert_spv_.c_str(), device);
     shaderStages[1].module =
-        vks::tools::loadShader("/media/secssd/catkin_ws/src/vrglasses_for_robots/vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv", device);
+        vks::tools::loadShader(shader_frag_spv_.c_str(), device);
 
     shaderModules = {shaderStages[0].module, shaderStages[1].module};
     VK_CHECK_RESULT(
@@ -1170,11 +1170,14 @@ void vrglasses_for_robots::VulkanRenderer::releaseMeshDataBuffers() {
 
 vrglasses_for_robots::VulkanRenderer::VulkanRenderer(
     uint32_t width, uint32_t height, float near, float far,
+    const std::string& shader_vert_spv, const std::string& shader_frag_spv,
     size_t max_landmark_count, size_t max_indice_count)
     : width_(width),
       height_(height),
       far_(far),
       near_(near),
+      shader_vert_spv_(shader_vert_spv),
+      shader_frag_spv_(shader_frag_spv),
       max_landmark_count_(max_landmark_count),
       max_indice_count_(max_indice_count) {
     std::cout << "Running headless rendering example\n";
