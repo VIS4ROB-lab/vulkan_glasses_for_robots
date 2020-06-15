@@ -106,7 +106,7 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
         depth_pub_.publish(depth_msg);
 
-        publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
+        //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
     }
 }
 
