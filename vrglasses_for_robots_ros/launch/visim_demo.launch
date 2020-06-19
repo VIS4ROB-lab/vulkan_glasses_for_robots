@@ -10,6 +10,8 @@
 		<remap from="odometry" to="vi_sensor/ground_truth/odometry" />
 		<param name="shader_folder" value="$(find vrglasses_for_robots)/shaders" />
 		<param name="framerate" value="20.0" />
+		<param name="mesh_obj_file" value="/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.obj" />
+		<param name="texture_file" value="/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.jpg" />
 	</node>
   </group>
 </launch>

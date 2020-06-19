@@ -37,7 +37,7 @@ bool VisimProcessor::initialization(const std::string &visim_project_folder, con
 void VisimProcessor::runHeadless()
 {
     VisimProject project =  visim_data_source_->getProject();
-    double near = 0.1, far = 100.0;
+    double near = 0.1, far = 500.0;
     vrglasses_for_robots::VulkanRenderer app = vrglasses_for_robots::VulkanRenderer(project.w,project.h,near,far);
     cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
 

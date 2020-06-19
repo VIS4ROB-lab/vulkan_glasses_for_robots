@@ -41,13 +41,34 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
 
 void VRGlassesNode::run()
 {
+
+    nh_private_.param("render_far",far_,far_);    
+
+    nh_private_.param("render_near",near_,near_);    
+
     renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w,visim_project_.h,near_,far_);
     glm::mat4 empty;
     buildOpenglProjectionFromIntrinsics(perpective_,empty,visim_project_.w,visim_project_.h,visim_project_.f,visim_project_.f,0,visim_project_.cx,visim_project_.cy,near_,far_);
 
     cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
 
-    renderer_->loadMesh("/media/secssd/dataset/vrglasses/inveraray/inveraray.obj","/media/secssd/dataset/vrglasses/inveraray/inveraray.tga");
+    std::string mesh_obj_file;
+    std::string texture_file;
+
+    if(!nh_private_.getParam("mesh_obj_file",mesh_obj_file))
+    {
+        ROS_ERROR("mesh_obj_file parameter not defined");
+    }
+
+    if(!nh_private_.getParam("texture_file",texture_file))
+    {
+        ROS_ERROR("texture_file parameter not defined");
+    }
+
+    
+    renderer_->loadMesh(mesh_obj_file,texture_file);
+        //"/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.obj","/media/secssd/dataset/amazon_models/hospital-construction-rawscan/OLOLCH.jpg");
+    //renderer_->loadMesh("/media/secssd/dataset/vrglasses/inveraray/inveraray.obj","/media/secssd/dataset/vrglasses/inveraray/inveraray.tga");
 ///media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj
 /// /media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga
     while (::ros::ok()) {

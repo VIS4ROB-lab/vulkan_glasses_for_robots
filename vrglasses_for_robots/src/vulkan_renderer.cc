@@ -484,9 +484,9 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
     shaderStages[1].pName = "main";
 
     shaderStages[0].module =
-        vks::tools::loadShader("/media/secssd/catkin_ws/src/vrglasses_for_robots/vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv", device);
+        vks::tools::loadShader("/media/secssd/catkin_ws/src/vulkan_glasses_for_robots/vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv", device);
     shaderStages[1].module =
-        vks::tools::loadShader("/media/secssd/catkin_ws/src/vrglasses_for_robots/vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv", device);
+        vks::tools::loadShader("/media/secssd/catkin_ws/src/vulkan_glasses_for_robots/vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv", device);
 
     shaderModules = {shaderStages[0].module, shaderStages[1].module};
     VK_CHECK_RESULT(
