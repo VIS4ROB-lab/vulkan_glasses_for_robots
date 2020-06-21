@@ -36,6 +36,7 @@ private:
     ros::Duration diff_frames_;
     ros::Time last_frame_time_;
 
+    std::string camera_frame_id_;
     std::string filename_obj_;
     std::string filename_texture_;
     std::string shader_folder_;

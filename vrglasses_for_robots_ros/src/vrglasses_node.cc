@@ -34,6 +34,11 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     diff_frames_.fromSec(1.0 / framerate);
     last_frame_time_ = ros::Time::now();
 
+    if (!nh_private_.getParam("camera_frame_id", camera_frame_id_)) {
+      camera_frame_id_ = "camera";
+      ROS_WARN("camera_frame_id parameter not found, using default('world')");
+    }
+
     // Mesh
     if (!nh_private_.getParam("filename_obj", filename_obj_)) {
       ROS_ERROR("OBJ filename not found, aborting...");
@@ -96,14 +101,17 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         cv::mixChannels(&result_rgbs_map_,1,out,2,from_to,4);
         sensor_msgs::ImagePtr rgb_msg;
         rgb_msg = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_).toImageMsg();
+        rgb_msg->header.frame_id = camera_frame_id_;
         color_pub_.publish(rgb_msg);
 
         sensor_msgs::ImagePtr semantic_msg;
         semantic_msg = cv_bridge::CvImage(msg.header, "mono8", result_s_map_).toImageMsg();
+        semantic_msg->header.frame_id = camera_frame_id_;
         semantic_pub_.publish(semantic_msg);
 
         sensor_msgs::ImagePtr depth_msg;
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
+        depth_msg->header.frame_id = camera_frame_id_;
         depth_pub_.publish(depth_msg);
 
         //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
