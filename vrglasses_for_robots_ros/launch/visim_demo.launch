@@ -12,6 +12,8 @@
 		<param name="framerate" value="20.0" />
 		<param name="mesh_obj_file" value="/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.obj" />
 		<param name="texture_file" value="/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.jpg" />
+		<param name="render_far" value="400.0" /><!-- the range between near and far should be as small as possible, this affects the accuracy of the render depth map-->
+		<param name="render_near" value="0.1" />
 	</node>
   </group>
 </launch>

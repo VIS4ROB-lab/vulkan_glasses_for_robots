@@ -61,7 +61,7 @@ private:
     // rendering
     vrglasses_for_robots::VulkanRenderer* renderer_;
     glm::mat4 perpective_;
-    double near_ = 0.1, far_ = 100.0;
+    double near_ = 0.1, far_ = 500.0;
     glm::mat4 computeMVP(const geometry_msgs::Pose &pose);
     cv::Mat result_depth_map_, result_rgbs_map_,result_rgb_map_,result_s_map_;
 
