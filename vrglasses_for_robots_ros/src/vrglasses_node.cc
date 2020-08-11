@@ -40,16 +40,6 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     }
 
     // Mesh
-    if (!nh_private_.getParam("filename_obj", filename_obj_)) {
-      ROS_ERROR("OBJ filename not found, aborting...");
-      return;
-    }
-
-    if (!nh_private_.getParam("filename_texture", filename_texture_)) {
-      ROS_ERROR("Texture filename not found, aborting...");
-      return;
-    }
-
     if (!nh_private_.getParam("shader_folder", shader_folder_)) {
       ROS_ERROR("Shader folder not found, aborting...");
       return;
@@ -61,20 +51,39 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
 
 void VRGlassesNode::run()
 {
+    // Renderer
     std::string shader_vert_spv =
         shader_folder_ + "/vrglasses4robots_shader.vert.spv";
     std::string shader_frag_spv =
         shader_folder_ + "/vrglasses4robots_shader.frag.spv";
-    renderer_ = new vrglasses_for_robots::VulkanRenderer(
-          visim_project_.w, visim_project_.h, near_, far_, shader_vert_spv,
-          shader_frag_spv);
 
+    // ROS Parameters
+    nh_private_.param("render_far",far_,far_);    
+    
+    nh_private_.param("render_near",near_,near_);    
+
+    renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
+          visim_project_.h, near_, far_, shader_vert_spv, shader_frag_spv);
     glm::mat4 empty;
-    buildOpenglProjectionFromIntrinsics(perpective_, empty, visim_project_.w,
-                                        visim_project_.h, visim_project_.f,
-                                        visim_project_.f, 0, visim_project_.cx,
-                                        visim_project_.cy, near_, far_);
-    renderer_->loadMesh(filename_obj_, filename_texture_);
+    buildOpenglProjectionFromIntrinsics(perpective_, empty, 
+            visim_project_.w, visim_project_.h, visim_project_.f,
+            visim_project_.f, 0, visim_project_.cx, visim_project_.cy, near_, far_);
+
+    std::string mesh_obj_file;
+    std::string texture_file;
+    if(!nh_private_.getParam("mesh_obj_file",mesh_obj_file))
+    {
+        ROS_ERROR("mesh_obj_file parameter not defined");
+    }
+
+    if(!nh_private_.getParam("texture_file",texture_file))
+    {
+        ROS_ERROR("texture_file parameter not defined");
+    }
+
+    // Load Mesh
+    renderer_->loadMesh(mesh_obj_file,texture_file);
+    
     while (::ros::ok()) {
       ::ros::spinOnce();
     }
