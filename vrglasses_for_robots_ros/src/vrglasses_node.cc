@@ -39,12 +39,6 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
       ROS_WARN("camera_frame_id parameter not found, using default('world')");
     }
 
-    // Mesh
-    if (!nh_private_.getParam("shader_folder", shader_folder_)) {
-      ROS_ERROR("Shader folder not found, aborting...");
-      return;
-    }
-
     // Initialization is fine
     initialized_ = true;
 }
@@ -52,10 +46,15 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
 void VRGlassesNode::run()
 {
     // Renderer
+    std::string shader_folder;
+    if (!nh_private_.getParam("shader_folder", shader_folder)) 
+    {
+        ROS_ERROR("shader_folder not defined");
+    }
     std::string shader_vert_spv =
-        shader_folder_ + "/vrglasses4robots_shader.vert.spv";
+        shader_folder + "/vrglasses4robots_shader.vert.spv";
     std::string shader_frag_spv =
-        shader_folder_ + "/vrglasses4robots_shader.frag.spv";
+        shader_folder + "/vrglasses4robots_shader.frag.spv";
 
     // ROS Parameters
     nh_private_.param("render_far",far_,far_);    
@@ -71,12 +70,12 @@ void VRGlassesNode::run()
 
     std::string mesh_obj_file;
     std::string texture_file;
-    if(!nh_private_.getParam("mesh_obj_file",mesh_obj_file))
+    if(!nh_private_.getParam("mesh_obj_file", mesh_obj_file))
     {
         ROS_ERROR("mesh_obj_file parameter not defined");
     }
 
-    if(!nh_private_.getParam("texture_file",texture_file))
+    if(!nh_private_.getParam("texture_file", texture_file))
     {
         ROS_ERROR("texture_file parameter not defined");
     }

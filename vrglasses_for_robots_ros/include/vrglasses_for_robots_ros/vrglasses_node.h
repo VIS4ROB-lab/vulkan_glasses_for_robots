@@ -37,7 +37,6 @@ private:
     ros::Time last_frame_time_;
 
     std::string camera_frame_id_;
-    std::string shader_folder_;
     bool initialized_;
 
     // ros
