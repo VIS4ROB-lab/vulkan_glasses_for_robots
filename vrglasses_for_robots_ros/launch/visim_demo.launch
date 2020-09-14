@@ -1,19 +1,23 @@
 <?xml version="1.0"?>
 <launch>
 
-  <arg name="mav_name" default="firefly"/>
+  <arg name="mav_name"       default="firefly"/>
   <arg name="enable_logging" default="false" />
-  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="log_file"       default="$(arg mav_name)" />
 
   <group ns="$(arg mav_name)">
-	<node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
-		<remap from="odometry" to="vi_sensor/ground_truth/odometry" />
-		<param name="shader_folder" value="$(find vrglasses_for_robots)/shaders" />
-		<param name="framerate" value="20.0" />
-		<param name="mesh_obj_file" value="/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.obj" />
-		<param name="texture_file" value="/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.jpg" />
-		<param name="render_far" value="400.0" /><!-- the range between near and far should be as small as possible, this affects the accuracy of the render depth map-->
-		<param name="render_near" value="0.1" />
-	</node>
+
+	  <node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
+	  	<remap from="odometry"         to="vi_sensor/ground_truth/odometry" />
+	  	
+  		<param name="framerate"        value="20.0" />
+  		<param name="camera_frame_id"  value="$(arg mav_name)/visensor/base_link" />
+	  	<param name="mesh_obj_file"    value="/home/luca/dataset/vr_planner/inveraray_castle/inveraray.obj" />
+  		<param name="texture_file"     value="/home/luca/dataset/vr_planner/inveraray_castle/inveraray.tga" />
+	  	<param name="shader_folder"    value="$(find vrglasses_for_robots)/shaders" />
+		  <param name="render_far"       value="400.0" /><!-- the range between near and far should be as small as possible, this affects the accuracy of the render depth map-->
+		  <param name="render_near"      value="0.1" />
+  	</node>
+
   </group>
 </launch>

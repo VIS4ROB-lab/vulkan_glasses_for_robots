@@ -11,7 +11,7 @@
 
 
 VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private): nh_(nh), nh_private_(nh_private),
-    image_transport_(nh_private_){
+    image_transport_(nh_private_), initialized_(false) {
     renderer_ = nullptr;
     odom_sub_ = nh_.subscribe("odometry", 500, &VRGlassesNode::odomCallback, this);
 
@@ -25,54 +25,66 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     result_rgb_map_.create(visim_project_.h,visim_project_.w,CV_8UC3);
     result_s_map_.create(visim_project_.h,visim_project_.w,CV_8UC1);
 
-
-
+    // Parameters
     double framerate;
-
-    if(!nh_private_.getParam("framerate", framerate))
-    {
-        framerate = 20;
-        ROS_WARN("framerate parameter not found, using default(20)");
+    if (!nh_private_.getParam("framerate", framerate)) {
+      framerate = 20;
+      ROS_WARN("framerate parameter not found, using default(20)");
     }
-    diff_frames_.fromSec(1.0/framerate);
+    diff_frames_.fromSec(1.0 / framerate);
     last_frame_time_ = ros::Time::now();
 
+    if (!nh_private_.getParam("camera_frame_id", camera_frame_id_)) {
+      camera_frame_id_ = "world";
+      ROS_WARN("camera_frame_id parameter not found, using default('world')");
+    }
+
+    // Initialization is fine
+    initialized_ = true;
 }
 
 void VRGlassesNode::run()
 {
+    // Renderer
+    std::string shader_folder;
+    if (!nh_private_.getParam("shader_folder", shader_folder)) 
+    {
+        ROS_ERROR("shader_folder not defined");
+    }
+    std::string shader_vert_spv =
+        shader_folder + "/vrglasses4robots_shader.vert.spv";
+    std::string shader_frag_spv =
+        shader_folder + "/vrglasses4robots_shader.frag.spv";
 
+    // ROS Parameters
     nh_private_.param("render_far",far_,far_);    
-
+    
     nh_private_.param("render_near",near_,near_);    
 
-    renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w,visim_project_.h,near_,far_);
+    renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
+          visim_project_.h, near_, far_, shader_vert_spv, shader_frag_spv);
     glm::mat4 empty;
-    buildOpenglProjectionFromIntrinsics(perpective_,empty,visim_project_.w,visim_project_.h,visim_project_.f,visim_project_.f,0,visim_project_.cx,visim_project_.cy,near_,far_);
-
-    cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
+    buildOpenglProjectionFromIntrinsics(perpective_, empty, 
+            visim_project_.w, visim_project_.h, visim_project_.f,
+            visim_project_.f, 0, visim_project_.cx, visim_project_.cy, near_, far_);
 
     std::string mesh_obj_file;
     std::string texture_file;
-
-    if(!nh_private_.getParam("mesh_obj_file",mesh_obj_file))
+    if(!nh_private_.getParam("mesh_obj_file", mesh_obj_file))
     {
         ROS_ERROR("mesh_obj_file parameter not defined");
     }
 
-    if(!nh_private_.getParam("texture_file",texture_file))
+    if(!nh_private_.getParam("texture_file", texture_file))
     {
         ROS_ERROR("texture_file parameter not defined");
     }
 
-    
+    // Load Mesh
     renderer_->loadMesh(mesh_obj_file,texture_file);
-        //"/media/secssd/dataset/amazon_models/hospital-construction-rawscan/children-lake-hospital.obj","/media/secssd/dataset/amazon_models/hospital-construction-rawscan/OLOLCH.jpg");
-    //renderer_->loadMesh("/media/secssd/dataset/vrglasses/inveraray/inveraray.obj","/media/secssd/dataset/vrglasses/inveraray/inveraray.tga");
-///media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj
-/// /media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga
+    
     while (::ros::ok()) {
-        ::ros::spinOnce();
+      ::ros::spinOnce();
     }
 }
 
@@ -97,14 +109,17 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         cv::mixChannels(&result_rgbs_map_,1,out,2,from_to,4);
         sensor_msgs::ImagePtr rgb_msg;
         rgb_msg = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_).toImageMsg();
+        rgb_msg->header.frame_id = camera_frame_id_;
         color_pub_.publish(rgb_msg);
 
         sensor_msgs::ImagePtr semantic_msg;
         semantic_msg = cv_bridge::CvImage(msg.header, "mono8", result_s_map_).toImageMsg();
+        semantic_msg->header.frame_id = camera_frame_id_;
         semantic_pub_.publish(semantic_msg);
 
         sensor_msgs::ImagePtr depth_msg;
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
+        depth_msg->header.frame_id = camera_frame_id_;
         depth_pub_.publish(depth_msg);
 
         //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
