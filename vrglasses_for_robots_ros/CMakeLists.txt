@@ -38,4 +38,5 @@ target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Vulkan_LIBRARY} )
 ##########
 
 cs_install()
+cs_install_scripts(scripts/pose_publisher.py)
 cs_export()
