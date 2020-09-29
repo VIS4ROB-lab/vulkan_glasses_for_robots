@@ -21,10 +21,10 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     color_pub_ = image_transport_.advertise("color_map", 1);
     semantic_pub_ = image_transport_.advertise("semantic_map", 1);
 
-    camera_odom_pub_ = nh_.advertise<nav_msgs::Odometry>("camera_odometry_out", 50);
+    camera_odom_pub_ = nh_private_.advertise<nav_msgs::Odometry>("camera_odometry_out", 50);
 
     dense_pointcloud_pub_ =
-            nh_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5);
+            nh_private_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5);
 
 
     result_rgb_map_.create(visim_project_.h,visim_project_.w,CV_8UC3);
