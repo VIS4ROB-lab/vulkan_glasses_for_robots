@@ -17,6 +17,7 @@
   <depend>sensor_msgs</depend>
   <depend>gazebo_ros</depend>
   <depend>minkindr</depend>
+  <depend>minkindr_conversions</depend>
   <depend>cv_bridge</depend>
   <depend>vrglasses_for_robots</depend>  
   <depend>image_transport</depend>

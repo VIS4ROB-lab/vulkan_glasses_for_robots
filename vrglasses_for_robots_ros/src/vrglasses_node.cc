@@ -6,6 +6,8 @@
 #include <ros/console.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/PointCloud.h>
+#include <minkindr_conversions/kindr_msg.h>
+
 
 
 
@@ -19,8 +21,11 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     color_pub_ = image_transport_.advertise("color_map", 1);
     semantic_pub_ = image_transport_.advertise("semantic_map", 1);
 
+    camera_odom_pub_ = nh_.advertise<nav_msgs::Odometry>("camera_odometry_out", 50);
+
     dense_pointcloud_pub_ =
             nh_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5);
+
 
     result_rgb_map_.create(visim_project_.h,visim_project_.w,CV_8UC3);
     result_s_map_.create(visim_project_.h,visim_project_.w,CV_8UC1);
@@ -100,9 +105,14 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
     if( msg.header.stamp - last_frame_time_ >= diff_frames_)
     {
         last_frame_time_ = msg.header.stamp;
-        glm::mat4 mvp = computeMVP(msg.pose.pose);
+        kindr::minimal::QuatTransformation T_WC = computeT_WC(msg.pose.pose);
+        glm::mat4 mvp = computeMVP(T_WC);
         renderer_->setCamera(mvp);
         renderer_->renderMesh(result_depth_map_, result_rgbs_map_);
+
+        nav_msgs::Odometry odom_msg = msg;        
+        tf::poseKindrToMsg(T_WC,&(odom_msg.pose.pose));
+        camera_odom_pub_.publish(odom_msg);
 
         cv::Mat out[] = { result_rgb_map_,result_s_map_ };
         int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
@@ -173,9 +183,7 @@ void VRGlassesNode::publishDenseSemanticCloud(const ::std_msgs::Header header, c
     dense_pointcloud_pub_.publish(labelled_pointcloud);
   }
 
-
-
-glm::mat4 VRGlassesNode::computeMVP(const geometry_msgs::Pose &pose)
+kindr::minimal::QuatTransformation VRGlassesNode::computeT_WC(const geometry_msgs::Pose &pose)
 {
     Eigen::Vector3d p_WS(pose.position.x, pose.position.y, pose.position.z);
 
@@ -183,12 +191,17 @@ glm::mat4 VRGlassesNode::computeMVP(const geometry_msgs::Pose &pose)
     q_WS.x() = pose.orientation.x;
     q_WS.y() = pose.orientation.y;
     q_WS.z() = pose.orientation.z;
-    q_WS.w() = pose.orientation.w;;
+    q_WS.w() = pose.orientation.w;
 
     kindr::minimal::QuatTransformation T_WC =
             kindr::minimal::QuatTransformation(p_WS, q_WS) * visim_project_.T_SC;
 
+    return T_WC;
+}
 
+
+glm::mat4 VRGlassesNode::computeMVP(const kindr::minimal::QuatTransformation &T_WC)
+{
     kindr::minimal::QuatTransformation T_CW_cv = T_WC.inverse();
     auto T_CW_cv_eigen = T_CW_cv.getTransformationMatrix();
     glm::mat4 T_CW_cv_glm;

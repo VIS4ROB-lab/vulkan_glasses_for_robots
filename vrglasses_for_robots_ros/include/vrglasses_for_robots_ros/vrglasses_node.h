@@ -42,8 +42,8 @@ private:
     // ros
     ::ros::NodeHandle nh_;
     ::ros::NodeHandle nh_private_;
-    ::ros::Subscriber odom_sub_;
-    ::ros::Publisher target_pub_;
+    ::ros::Subscriber odom_sub_; //usually imu (sensor S) pose of visim (T_WS)
+    ::ros::Publisher  camera_odom_pub_; // camera in the model world frame (T_WC)
 
     image_transport::Publisher color_pub_;
     //image_transport::ImageTransport rgb_imt_;
@@ -58,6 +58,10 @@ private:
 
 
 
+    glm::mat4 computeMVP(const kindr::minimal::QuatTransformation &pose);
+
+    kindr::minimal::QuatTransformation computeT_WC(const geometry_msgs::Pose &pose);
+
     void odomCallback(const nav_msgs::Odometry &msg);
 
     void publishDenseSemanticCloud(const std_msgs::Header header, const sensor_msgs::ImagePtr &depth_map, const cv::Mat& semantic_map);
@@ -66,7 +70,7 @@ private:
     vrglasses_for_robots::VulkanRenderer* renderer_;
     glm::mat4 perpective_;
     double near_ = 0.1, far_ = 500.0;
-    glm::mat4 computeMVP(const geometry_msgs::Pose &pose);
+
     cv::Mat result_depth_map_, result_rgbs_map_,result_rgb_map_,result_s_map_;
 
     void buildOpenglProjectionFromIntrinsics(
