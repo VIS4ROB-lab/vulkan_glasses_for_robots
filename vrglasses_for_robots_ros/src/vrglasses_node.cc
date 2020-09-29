@@ -23,8 +23,8 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
 
     camera_odom_pub_ = nh_private_.advertise<nav_msgs::Odometry>("camera_odometry_out", 50);
 
-    dense_pointcloud_pub_ =
-            nh_private_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5);
+    //dense_pointcloud_pub_ =
+    //        nh_private_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5); //TODO add param to enable the point cloud publication
 
 
     result_rgb_map_.create(visim_project_.h,visim_project_.w,CV_8UC3);
@@ -132,7 +132,7 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         depth_msg->header.frame_id = camera_frame_id_;
         depth_pub_.publish(depth_msg);
 
-        //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_);
+        //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_); //TODO add param to enable the point cloud publication
     }
 }
 
