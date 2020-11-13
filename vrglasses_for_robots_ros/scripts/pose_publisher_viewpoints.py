@@ -170,7 +170,7 @@ def compute_star_orientations(points, yaw_angles, pitch):
 def publisher(points, orientations):
     pub = rospy.Publisher('pose_publisher/odometry', Odometry, queue_size=1)
     rospy.init_node('pose_publisher', anonymous=True)
-    rate = rospy.Rate(10) # Hz
+    rate = rospy.Rate(0.3) # Hz
     
     file_dir = '/home/fabiola/Desktop/star_poses.txt'
     with open(file_dir, 'w') as f:
@@ -191,16 +191,21 @@ def publisher(points, orientations):
             pub.publish(p)
             if rospy.is_shutdown():
                 break
-            #rate.sleep()
+            rate.sleep()
 
     f.close()
 
 
 if __name__ == '__main__':
-    #points = fibonacci_sphere(100,80) # constant_height(70)
+    points = fibonacci_sphere(20,120)
+    #points = constant_height(70)
     #points = frontal_plane()
-    points, yaw_angles = star_positions2()
-    orientations = compute_star_orientations(points, yaw_angles, -45) #compute_downlook_orientations(points) #compute_orientations(points) 
+    #points, yaw_angles = star_positions2()
+
+    #orientations = compute_star_orientations(points, yaw_angles, -60)
+    #orientations = compute_downlook_orientations(points)
+    orientations = compute_orientations(points)
+
     try:
         publisher(points, orientations)
     except rospy.ROSInterruptException:
