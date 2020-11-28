@@ -4,11 +4,12 @@ import rospy
 from nav_msgs.msg import Odometry
 
 def publisher():
-    pub = rospy.Publisher('odometry', Odometry, queue_size=1)
+    pub = rospy.Publisher('/firefly/vi_sensor/ground_truth/odometry', Odometry, queue_size=1)
     rospy.init_node('pose_publisher', anonymous=True)
     rate = rospy.Rate(10) # Hz
     while not rospy.is_shutdown():
         p = Odometry()
+        p.header.stamp = rospy.Time.now()
         p.pose.pose.position.x = -60
         p.pose.pose.position.y = -20
         p.pose.pose.position.z = 15.0

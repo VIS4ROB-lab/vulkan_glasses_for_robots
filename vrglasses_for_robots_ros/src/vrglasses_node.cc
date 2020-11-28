@@ -37,7 +37,7 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
       ROS_WARN("framerate parameter not found, using default(20)");
     }
     diff_frames_.fromSec(1.0 / framerate);
-    last_frame_time_ = ros::Time::now();
+    last_frame_time_ = ros::Time(0);
 
     if (!nh_private_.getParam("camera_frame_id", camera_frame_id_)) {
       camera_frame_id_ = "world";
