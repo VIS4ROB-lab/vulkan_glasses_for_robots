@@ -6,6 +6,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <vrglasses_for_robots/tiny_obj_loader.h>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <opencv2/imgproc.hpp>
 #include <unordered_map>
 
@@ -27,7 +29,7 @@ uint32_t vrglasses_for_robots::VulkanRenderer::getMemoryTypeIndex(
 
 VkResult vrglasses_for_robots::VulkanRenderer::createBuffer(
     VkBufferUsageFlags usageFlags, VkMemoryPropertyFlags memoryPropertyFlags,
-    VkBuffer* buffer, VkDeviceMemory* memory, VkDeviceSize size, void* data) {
+    VkBuffer *buffer, VkDeviceMemory *memory, VkDeviceSize size, void *data) {
   // Create the buffer handle
   VkBufferCreateInfo bufferCreateInfo =
       vks::initializers::bufferCreateInfo(usageFlags, size);
@@ -44,7 +46,7 @@ VkResult vrglasses_for_robots::VulkanRenderer::createBuffer(
   VK_CHECK_RESULT(vkAllocateMemory(device, &memAlloc, nullptr, memory));
 
   if (data != nullptr) {
-    void* mapped;
+    void *mapped;
     VK_CHECK_RESULT(vkMapMemory(device, *memory, 0, size, 0, &mapped));
     memcpy(mapped, data, size);
     vkUnmapMemory(device, *memory);
@@ -55,8 +57,8 @@ VkResult vrglasses_for_robots::VulkanRenderer::createBuffer(
   return VK_SUCCESS;
 }
 
-void vrglasses_for_robots::VulkanRenderer::submitWork(
-    VkCommandBuffer cmdBuffer, VkQueue queue) {
+void vrglasses_for_robots::VulkanRenderer::submitWork(VkCommandBuffer cmdBuffer,
+                                                      VkQueue queue) {
   VkSubmitInfo submitInfo = vks::initializers::submitInfo();
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &cmdBuffer;
@@ -84,7 +86,7 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
 
   uint32_t layerCount = 0;
 
-  const char* validationLayers[] = {"VK_LAYER_LUNARG_standard_validation"};
+  const char *validationLayers[] = {"VK_LAYER_LUNARG_standard_validation"};
   layerCount = 1;
   bool layersAvailable = true;
 
@@ -94,8 +96,8 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
     uint32_t instanceLayerCount;
     vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr);
     std::vector<VkLayerProperties> instanceLayers(instanceLayerCount);
-    vkEnumerateInstanceLayerProperties(
-        &instanceLayerCount, instanceLayers.data());
+    vkEnumerateInstanceLayerProperties(&instanceLayerCount,
+                                       instanceLayers.data());
 
     for (auto layerName : validationLayers) {
       bool layerAvailable = false;
@@ -113,7 +115,7 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
 
     if (layersAvailable) {
       instanceCreateInfo.ppEnabledLayerNames = validationLayers;
-      const char* validationExt = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
+      const char *validationExt = VK_EXT_DEBUG_REPORT_EXTENSION_NAME;
       instanceCreateInfo.enabledLayerCount = layerCount;
       instanceCreateInfo.enabledExtensionCount = 1;
       instanceCreateInfo.ppEnabledExtensionNames = &validationExt;
@@ -137,9 +139,8 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
         reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(
             vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT"));
     assert(vkCreateDebugReportCallbackEXT);
-    VK_CHECK_RESULT(
-        vkCreateDebugReportCallbackEXT(
-            instance, &debugReportCreateInfo, nullptr, &debugReportCallback));
+    VK_CHECK_RESULT(vkCreateDebugReportCallbackEXT(
+        instance, &debugReportCreateInfo, nullptr, &debugReportCallback));
   }
 #endif
 
@@ -149,9 +150,8 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
   uint32_t deviceCount = 0;
   VK_CHECK_RESULT(vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr));
   std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
-  VK_CHECK_RESULT(
-      vkEnumeratePhysicalDevices(
-          instance, &deviceCount, physicalDevices.data()));
+  VK_CHECK_RESULT(vkEnumeratePhysicalDevices(instance, &deviceCount,
+                                             physicalDevices.data()));
   physicalDevice = physicalDevices[0];
 
   VkPhysicalDeviceProperties deviceProperties;
@@ -162,11 +162,11 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
   const float defaultQueuePriority(0.0f);
   VkDeviceQueueCreateInfo queueCreateInfo = {};
   uint32_t queueFamilyCount;
-  vkGetPhysicalDeviceQueueFamilyProperties(
-      physicalDevice, &queueFamilyCount, nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount,
+                                           nullptr);
   std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(
-      physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
+  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount,
+                                           queueFamilyProperties.data());
   for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilyProperties.size());
        i++) {
     if (queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -196,12 +196,10 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
   cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
   VK_CHECK_RESULT(
       vkCreateCommandPool(device, &cmdPoolInfo, nullptr, &commandPool));
-
-
 }
 
-void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
-    uint32_t width, uint32_t height) {
+void vrglasses_for_robots::VulkanRenderer::buildRenderPass(uint32_t width,
+                                                           uint32_t height) {
   // vks::tools::getSupportedDepthFormat(physicalDevice, &depthFormat);
   {
     // Color attachment
@@ -229,9 +227,8 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
         memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CHECK_RESULT(
         vkAllocateMemory(device, &memAlloc, nullptr, &colorAttachment.memory));
-    VK_CHECK_RESULT(
-        vkBindImageMemory(
-            device, colorAttachment.image, colorAttachment.memory, 0));
+    VK_CHECK_RESULT(vkBindImageMemory(device, colorAttachment.image,
+                                      colorAttachment.memory, 0));
 
     VkImageViewCreateInfo colorImageView =
         vks::initializers::imageViewCreateInfo();
@@ -244,9 +241,8 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
     colorImageView.subresourceRange.baseArrayLayer = 0;
     colorImageView.subresourceRange.layerCount = 1;
     colorImageView.image = colorAttachment.image;
-    VK_CHECK_RESULT(
-        vkCreateImageView(
-            device, &colorImageView, nullptr, &colorAttachment.view));
+    VK_CHECK_RESULT(vkCreateImageView(device, &colorImageView, nullptr,
+                                      &colorAttachment.view));
 
     // Depth stencil attachment (reuse all configuration, but format and usage)
     image.format = depthFormat;
@@ -261,9 +257,8 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
         memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     VK_CHECK_RESULT(
         vkAllocateMemory(device, &memAlloc, nullptr, &depthAttachment.memory));
-    VK_CHECK_RESULT(
-        vkBindImageMemory(
-            device, depthAttachment.image, depthAttachment.memory, 0));
+    VK_CHECK_RESULT(vkBindImageMemory(device, depthAttachment.image,
+                                      depthAttachment.memory, 0));
 
     VkImageViewCreateInfo depthStencilView =
         vks::initializers::imageViewCreateInfo();
@@ -278,9 +273,8 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
     depthStencilView.subresourceRange.baseArrayLayer = 0;
     depthStencilView.subresourceRange.layerCount = 1;
     depthStencilView.image = depthAttachment.image;
-    VK_CHECK_RESULT(
-        vkCreateImageView(
-            device, &depthStencilView, nullptr, &depthAttachment.view));
+    VK_CHECK_RESULT(vkCreateImageView(device, &depthStencilView, nullptr,
+                                      &depthAttachment.view));
   }
 
   /*
@@ -366,48 +360,43 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
     framebufferCreateInfo.width = width;
     framebufferCreateInfo.height = height;
     framebufferCreateInfo.layers = 1;
-    VK_CHECK_RESULT(
-        vkCreateFramebuffer(
-            device, &framebufferCreateInfo, nullptr, &framebuffer));
+    VK_CHECK_RESULT(vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr,
+                                        &framebuffer));
   }
 
   /*
           Prepare graphics pipeline
   */
   {
-    std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {// Binding 0 : Fragment shader image sampler
-                                                                   vks::initializers::descriptorSetLayoutBinding(
-                                                                       VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                                                                       VK_SHADER_STAGE_FRAGMENT_BIT,
-                                                                       0)};
-
+    std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings = {
+        // Binding 0 : Fragment shader image sampler
+        vks::initializers::descriptorSetLayoutBinding(
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            VK_SHADER_STAGE_FRAGMENT_BIT, 0)};
 
     VkDescriptorSetLayoutCreateInfo descriptorLayout =
         vks::initializers::descriptorSetLayoutCreateInfo(setLayoutBindings);
-    VK_CHECK_RESULT(
-        vkCreateDescriptorSetLayout(
-            device, &descriptorLayout, nullptr, &descriptorSetLayout));
+    VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device, &descriptorLayout,
+                                                nullptr, &descriptorSetLayout));
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo =
         vks::initializers::pipelineLayoutCreateInfo(&descriptorSetLayout, 1);
 
     // MVP via push constant block
     VkPushConstantRange pushConstantRange =
-        vks::initializers::pushConstantRange(
-            VK_SHADER_STAGE_VERTEX_BIT, sizeof(glm::mat4), 0);
+        vks::initializers::pushConstantRange(VK_SHADER_STAGE_VERTEX_BIT,
+                                             sizeof(glm::mat4), 0);
     pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
     pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange;
 
-    VK_CHECK_RESULT(
-        vkCreatePipelineLayout(
-            device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout));
+    VK_CHECK_RESULT(vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo,
+                                           nullptr, &pipelineLayout));
 
     VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
     pipelineCacheCreateInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    VK_CHECK_RESULT(
-        vkCreatePipelineCache(
-            device, &pipelineCacheCreateInfo, nullptr, &pipelineCache));
+    VK_CHECK_RESULT(vkCreatePipelineCache(device, &pipelineCacheCreateInfo,
+                                          nullptr, &pipelineCache));
 
     // Create pipeline
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState =
@@ -459,10 +448,12 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
 
     // Vertex bindings an attributes
     // Binding description
-    std::vector<VkVertexInputBindingDescription> vertexInputBindings = {Vertex::getBindingDescription()};
+    std::vector<VkVertexInputBindingDescription> vertexInputBindings = {
+        Vertex::getBindingDescription()};
 
     // Attribute descriptions
-    std::array<VkVertexInputAttributeDescription, 2> vertexInputAttributes = Vertex::getAttributeDescriptions();
+    std::array<VkVertexInputAttributeDescription, 2> vertexInputAttributes =
+        Vertex::getAttributeDescriptions();
 
     VkPipelineVertexInputStateCreateInfo vertexInputState =
         vks::initializers::pipelineVertexInputStateCreateInfo();
@@ -489,9 +480,8 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
         vks::tools::loadShader(shader_frag_spv_.c_str(), device);
 
     shaderModules = {shaderStages[0].module, shaderStages[1].module};
-    VK_CHECK_RESULT(
-        vkCreateGraphicsPipelines(
-            device, pipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
+    VK_CHECK_RESULT(vkCreateGraphicsPipelines(
+        device, pipelineCache, 1, &pipelineCreateInfo, nullptr, &pipeline));
   }
 
   // create buffer for copy
@@ -519,28 +509,26 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(
     vkGetImageMemoryRequirements(device, dstImage, &memRequirements);
     memAllocInfo.allocationSize = memRequirements.size;
     // Memory must be host visible to copy from
-    memAllocInfo.memoryTypeIndex = getMemoryTypeIndex(
-        memRequirements.memoryTypeBits,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    memAllocInfo.memoryTypeIndex =
+        getMemoryTypeIndex(memRequirements.memoryTypeBits,
+                           VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     VK_CHECK_RESULT(
         vkAllocateMemory(device, &memAllocInfo, nullptr, &dstImageMemory));
     VK_CHECK_RESULT(vkBindImageMemory(device, dstImage, dstImageMemory, 0));
 
-    VkDeviceSize mem_size = height * width * 4;  // assuming D32
-    createBuffer(
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        &image_buffer, &image_buffer_memory, mem_size);
+    VkDeviceSize mem_size = height * width * 4; // assuming D32
+    createBuffer(VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 &image_buffer, &image_buffer_memory, mem_size);
   }
 
-    setupDescriptorPool();
-
+  setupDescriptorPool();
 }
 
-void vrglasses_for_robots::VulkanRenderer::drawTriangles(
-    uint32_t width, uint32_t height) {
+void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
+                                                         uint32_t height) {
   /*
           Command buffer creation
   */
@@ -570,8 +558,8 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(
     renderPassBeginInfo.renderPass = renderPass;
     renderPassBeginInfo.framebuffer = framebuffer;
 
-    vkCmdBeginRenderPass(
-        commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo,
+                         VK_SUBPASS_CONTENTS_INLINE);
 
     VkViewport viewport = {};
     viewport.height = (float)height;
@@ -593,13 +581,23 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
-    vkCmdPushConstants(
-        commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-        sizeof(mvp_cv_), &mvp_cv_);
+    vkCmdPushConstants(commandBuffer, pipelineLayout,
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp_cv_),
+                       &mvp_cv_);
 
-    vkCmdDrawIndexed(commandBuffer, indices_.size(), 1, 0, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, std::floor(indices_.size() / 2), 1, 0, 0,
+                     0);
+
+    // mvp_cv_ = glm::translate( mvp_cv_, glm::vec3(0,0,10) );
+    vkCmdPushConstants(commandBuffer, pipelineLayout,
+                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp_cv_),
+                       &mvp_cv_);
+    vkCmdDrawIndexed(commandBuffer,
+                     indices_.size() - std::floor(indices_.size() / 2), 1,
+                     std::floor(indices_.size() / 2), 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -630,14 +628,14 @@ float vrglasses_for_robots::VulkanRenderer::convertZbufferToDepth(
 }
 
 void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
-    uint32_t width, uint32_t height, cv::Mat& result_depth_map,
-    cv::Mat& result_attribute_map) {
+    uint32_t width, uint32_t height, cv::Mat &result_depth_map,
+    cv::Mat &result_attribute_map) {
   result_depth_map.create(height, width, CV_32F);
   result_attribute_map.create(height, width, CV_8UC4);
   /*
           Copy framebuffer image to host visible image
   */
-  const char* imagedata;
+  const char *imagedata;
   {
     // Do the actual blit from the offscreen image to our host visible
     // destination image
@@ -674,9 +672,9 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
     imageCopyRegion.extent.height = height;
     imageCopyRegion.extent.depth = 1;
 
-    vkCmdCopyImage(
-        copyCmd, colorAttachment.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyRegion);
+    vkCmdCopyImage(copyCmd, colorAttachment.image,
+                   VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopyRegion);
 
     // Transition destination image to general layout, which is the required
     // layout for mapping the image memory later on
@@ -701,9 +699,9 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
     region.imageOffset = (VkOffset3D){0, 0, 0};
     region.imageExtent = (VkExtent3D){width, height, 1};
 
-    vkCmdCopyImageToBuffer(
-        copyCmd, depthAttachment.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        image_buffer, 1, &region);
+    vkCmdCopyImageToBuffer(copyCmd, depthAttachment.image,
+                           VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image_buffer,
+                           1, &region);
 
     VK_CHECK_RESULT(vkEndCommandBuffer(copyCmd));
 
@@ -714,16 +712,16 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
     subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     VkSubresourceLayout subResourceLayout;
 
-    vkGetImageSubresourceLayout(
-        device, dstImage, &subResource, &subResourceLayout);
+    vkGetImageSubresourceLayout(device, dstImage, &subResource,
+                                &subResourceLayout);
 
     // Map image memory so we can start copying from it
-    vkMapMemory(
-        device, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&imagedata);
+    vkMapMemory(device, dstImageMemory, 0, VK_WHOLE_SIZE, 0,
+                (void **)&imagedata);
     imagedata += subResourceLayout.offset;
 
     {
-      VkDeviceSize mem_size = height * width * 4;  // assuming 8UC4
+      VkDeviceSize mem_size = height * width * 4; // assuming 8UC4
       memcpy(result_attribute_map.data, imagedata, mem_size);
     }
 
@@ -731,7 +729,7 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
           Save host visible framebuffer image to disk (ppm format)
   */
     if (/* DISABLES CODE */ (0)) {
-      const char* filename = "headless.ppm";
+      const char *filename = "headless.ppm";
 
       std::ofstream file(filename, std::ios::out | std::ios::binary);
 
@@ -746,20 +744,19 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
       std::vector<VkFormat> formatsBGR = {VK_FORMAT_B8G8R8A8_SRGB,
                                           VK_FORMAT_B8G8R8A8_UNORM,
                                           VK_FORMAT_B8G8R8A8_SNORM};
-      colorSwizzle =
-          (std::find(formatsBGR.begin(), formatsBGR.end(), colorFormat) !=
-           formatsBGR.end());
+      colorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(),
+                                colorFormat) != formatsBGR.end());
 
       // ppm binary pixel data
       for (int32_t y = 0; y < height; y++) {
-        unsigned int* row = (unsigned int*)imagedata;
+        unsigned int *row = (unsigned int *)imagedata;
         for (int32_t x = 0; x < width; x++) {
           if (colorSwizzle) {
-            file.write((char*)row + 2, 1);
-            file.write((char*)row + 1, 1);
-            file.write((char*)row, 1);
+            file.write((char *)row + 2, 1);
+            file.write((char *)row + 1, 1);
+            file.write((char *)row, 1);
           } else {
-            file.write((char*)row, 3);
+            file.write((char *)row, 3);
           }
           row++;
         }
@@ -770,8 +767,8 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
     vkUnmapMemory(device, dstImageMemory);
 
     {
-      void* mapped;
-      VkDeviceSize mem_size = height * width * 4;  // assuming D32
+      void *mapped;
+      VkDeviceSize mem_size = height * width * 4; // assuming D32
       VK_CHECK_RESULT(
           vkMapMemory(device, image_buffer_memory, 0, mem_size, 0, &mapped));
 
@@ -781,288 +778,323 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
       // 2.0 * near* far / (far + near - zValue * (far - near));
 
       //      result_depth_map.convertTo(result_depth_map, CV_32F, 2, -1);
-      result_depth_map.convertTo(
-          result_depth_map, CV_32F, -1.0 * static_cast<double>(far_ - near_),
-          static_cast<double>(far_ + near_));
+      result_depth_map.convertTo(result_depth_map, CV_32F,
+                                 -1.0 * static_cast<double>(far_ - near_),
+                                 static_cast<double>(far_ + near_));
 
       result_depth_map = (2.0f * far_ * near_) / result_depth_map;
 
       // cv::flip(result_depth_map, result_depth_map, 0);
-      cv::threshold(
-          result_depth_map, result_depth_map, far_ - 0.0001, far_,
-          cv::THRESH_TOZERO_INV);
+      cv::threshold(result_depth_map, result_depth_map, far_ - 0.0001, far_,
+                    cv::THRESH_TOZERO_INV);
     }
     // LOG("Framebuffer image saved to %s\n", filename);
   }
 }
 
-void vrglasses_for_robots::VulkanRenderer::setupDescriptorPool()
-    {
-        // Example uses one ubo and one image sampler
-        std::vector<VkDescriptorPoolSize> poolSizes =
-        {
-            vks::initializers::descriptorPoolSize(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)
-        };
+void vrglasses_for_robots::VulkanRenderer::setupDescriptorPool() {
+  // Example uses one ubo and one image sampler
+  std::vector<VkDescriptorPoolSize> poolSizes = {
+      vks::initializers::descriptorPoolSize(
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)};
 
-        VkDescriptorPoolCreateInfo descriptorPoolInfo =
-            vks::initializers::descriptorPoolCreateInfo(
-                static_cast<uint32_t>(poolSizes.size()),
-                poolSizes.data(),
-                1);
+  VkDescriptorPoolCreateInfo descriptorPoolInfo =
+      vks::initializers::descriptorPoolCreateInfo(
+          static_cast<uint32_t>(poolSizes.size()), poolSizes.data(), 1);
 
-        VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr, &descriptorPool));
-    }
-
-void vrglasses_for_robots::VulkanRenderer::setupDescriptorSet()
-    {
-        VkDescriptorSetAllocateInfo allocInfo =
-            vks::initializers::descriptorSetAllocateInfo(
-                descriptorPool,
-                &descriptorSetLayout,
-                1);
-
-        VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet));
-
-        // Setup a descriptor image info for the current texture to be used as a combined image sampler
-        VkDescriptorImageInfo textureDescriptor;
-        textureDescriptor.imageView = textureImageView;				// The image's view (images are never directly accessed by the shader, but rather through views defining subresources)
-        textureDescriptor.sampler = textureSampler;			// The sampler (Telling the pipeline how to sample the texture, including repeat, border, etc.)
-        textureDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;	// The current layout of the image (Note: Should always fit the actual use, e.g. shader read)
-
-        std::vector<VkWriteDescriptorSet> writeDescriptorSets =
-        {
-            // Binding 1 : Fragment shader texture sampler
-            //	Fragment shader: layout (binding = 0) uniform sampler2D samplerColor;
-            vks::initializers::writeDescriptorSet(
-                descriptorSet,
-                VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,		// The descriptor set will use a combined image sampler (sampler and image could be split)
-                0,												// Shader binding point 0
-                &textureDescriptor)								// Pointer to the descriptor image for our texture
-        };
-
-        vkUpdateDescriptorSets(device, static_cast<uint32_t>(writeDescriptorSets.size()), writeDescriptorSets.data(), 0, NULL);
-    }
-
-void  vrglasses_for_robots::VulkanRenderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) {
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
-
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-
-    vkBindBufferMemory(device, buffer, bufferMemory, 0);
+  VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr,
+                                         &descriptorPool));
 }
 
-uint32_t vrglasses_for_robots::VulkanRenderer::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+void vrglasses_for_robots::VulkanRenderer::setupDescriptorSet() {
+  VkDescriptorSetAllocateInfo allocInfo =
+      vks::initializers::descriptorSetAllocateInfo(descriptorPool,
+                                                   &descriptorSetLayout, 1);
 
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
+  VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet));
+
+  // Setup a descriptor image info for the current texture to be used as a
+  // combined image sampler
+  VkDescriptorImageInfo textureDescriptor;
+  textureDescriptor.imageView =
+      textureImageView; // The image's view (images are never directly accessed
+                        // by the shader, but rather through views defining
+                        // subresources)
+  textureDescriptor.sampler =
+      textureSampler; // The sampler (Telling the pipeline how to sample the
+                      // texture, including repeat, border, etc.)
+  textureDescriptor.imageLayout =
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // The current layout of the
+                                                // image (Note: Should always
+                                                // fit the actual use, e.g.
+                                                // shader read)
+
+  std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
+      // Binding 1 : Fragment shader texture sampler
+      //	Fragment shader: layout (binding = 0) uniform sampler2D
+      //samplerColor;
+      vks::initializers::writeDescriptorSet(
+          descriptorSet,
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // The descriptor set will
+                                                     // use a combined image
+                                                     // sampler (sampler and
+                                                     // image could be split)
+          0,                                         // Shader binding point 0
+          &textureDescriptor) // Pointer to the descriptor image for our texture
+  };
+
+  vkUpdateDescriptorSets(device,
+                         static_cast<uint32_t>(writeDescriptorSets.size()),
+                         writeDescriptorSets.data(), 0, NULL);
+}
+
+void vrglasses_for_robots::VulkanRenderer::createBuffer(
+    VkDeviceSize size, VkBufferUsageFlags usage,
+    VkMemoryPropertyFlags properties, VkBuffer &buffer,
+    VkDeviceMemory &bufferMemory) {
+  VkBufferCreateInfo bufferInfo = {};
+  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bufferInfo.size = size;
+  bufferInfo.usage = usage;
+  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+  if (vkCreateBuffer(device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create buffer!");
+  }
+
+  VkMemoryRequirements memRequirements;
+  vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+  VkMemoryAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  allocInfo.memoryTypeIndex =
+      findMemoryType(memRequirements.memoryTypeBits, properties);
+
+  if (vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate buffer memory!");
+  }
+
+  vkBindBufferMemory(device, buffer, bufferMemory, 0);
+}
+
+uint32_t vrglasses_for_robots::VulkanRenderer::findMemoryType(
+    uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+  VkPhysicalDeviceMemoryProperties memProperties;
+  vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+
+  for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+    if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags &
+                                    properties) == properties) {
+      return i;
     }
+  }
 
-    throw std::runtime_error("failed to find suitable memory type!");
+  throw std::runtime_error("failed to find suitable memory type!");
 }
 
 void vrglasses_for_robots::VulkanRenderer::createTextureImage() {
-    int texWidth, texHeight, texChannels;
-    stbi_uc* pixels = stbi_load(filename_texture_.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-    VkDeviceSize imageSize = texWidth * texHeight * 4;
+  int texWidth, texHeight, texChannels;
+  stbi_uc *pixels = stbi_load(filename_texture_.c_str(), &texWidth, &texHeight,
+                              &texChannels, STBI_rgb_alpha);
+  VkDeviceSize imageSize = texWidth * texHeight * 4;
 
-    if (!pixels) {
-        throw std::runtime_error("failed to load texture image!");
-    }
+  if (!pixels) {
+    throw std::runtime_error("failed to load texture image!");
+  }
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+  VkBuffer stagingBuffer;
+  VkDeviceMemory stagingBufferMemory;
+  createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+               stagingBuffer, stagingBufferMemory);
 
-    void* data;
-    vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
-        memcpy(data, pixels, static_cast<size_t>(imageSize));
-    vkUnmapMemory(device, stagingBufferMemory);
+  void *data;
+  vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &data);
+  memcpy(data, pixels, static_cast<size_t>(imageSize));
+  vkUnmapMemory(device, stagingBufferMemory);
 
-    stbi_image_free(pixels);
+  stbi_image_free(pixels);
 
-    createImage(texWidth, texHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+  createImage(
+      texWidth, texHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
+      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
 
-    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-    transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM,
+                        VK_IMAGE_LAYOUT_UNDEFINED,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  copyBufferToImage(stagingBuffer, textureImage,
+                    static_cast<uint32_t>(texWidth),
+                    static_cast<uint32_t>(texHeight));
+  transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMemory, nullptr);
+  vkDestroyBuffer(device, stagingBuffer, nullptr);
+  vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
-void vrglasses_for_robots::VulkanRenderer::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+void vrglasses_for_robots::VulkanRenderer::copyBufferToImage(VkBuffer buffer,
+                                                             VkImage image,
+                                                             uint32_t width,
+                                                             uint32_t height) {
+  VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-    VkBufferImageCopy region = {};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {
-        width,
-        height,
-        1
-    };
+  VkBufferImageCopy region = {};
+  region.bufferOffset = 0;
+  region.bufferRowLength = 0;
+  region.bufferImageHeight = 0;
+  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+  region.imageOffset = {0, 0, 0};
+  region.imageExtent = {width, height, 1};
 
-    vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+  vkCmdCopyBufferToImage(commandBuffer, buffer, image,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-    endSingleTimeCommands(commandBuffer);
+  endSingleTimeCommands(commandBuffer);
 }
 
-void vrglasses_for_robots::VulkanRenderer::createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory) {
-    VkImageCreateInfo imageInfo = {};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
-    imageInfo.extent.depth = 1;
-    imageInfo.mipLevels = 1;
-    imageInfo.arrayLayers = 1;
-    imageInfo.format = format;
-    imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo.usage = usage;
-    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+void vrglasses_for_robots::VulkanRenderer::createImage(
+    uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+    VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image,
+    VkDeviceMemory &imageMemory) {
+  VkImageCreateInfo imageInfo = {};
+  imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.imageType = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width = width;
+  imageInfo.extent.height = height;
+  imageInfo.extent.depth = 1;
+  imageInfo.mipLevels = 1;
+  imageInfo.arrayLayers = 1;
+  imageInfo.format = format;
+  imageInfo.tiling = tiling;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage = usage;
+  imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image!");
-    }
+  if (vkCreateImage(device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create image!");
+  }
 
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device, image, &memRequirements);
+  VkMemoryRequirements memRequirements;
+  vkGetImageMemoryRequirements(device, image, &memRequirements);
 
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+  VkMemoryAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  allocInfo.allocationSize = memRequirements.size;
+  allocInfo.memoryTypeIndex =
+      findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate image memory!");
-    }
+  if (vkAllocateMemory(device, &allocInfo, nullptr, &imageMemory) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to allocate image memory!");
+  }
 
-    vkBindImageMemory(device, image, imageMemory, 0);
+  vkBindImageMemory(device, image, imageMemory, 0);
 }
 
-void vrglasses_for_robots::VulkanRenderer::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+void vrglasses_for_robots::VulkanRenderer::transitionImageLayout(
+    VkImage image, VkFormat format, VkImageLayout oldLayout,
+    VkImageLayout newLayout) {
+  VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+  VkImageMemoryBarrier barrier = {};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = oldLayout;
+  barrier.newLayout = newLayout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image = image;
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
 
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
+  VkPipelineStageFlags sourceStage;
+  VkPipelineStageFlags destinationStage;
 
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+      newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    } else {
-        throw std::invalid_argument("unsupported layout transition!");
-    }
+    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  } else {
+    throw std::invalid_argument("unsupported layout transition!");
+  }
 
-    vkCmdPipelineBarrier(
-        commandBuffer,
-        sourceStage, destinationStage,
-        0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
+  vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0,
+                       nullptr, 0, nullptr, 1, &barrier);
 
-    endSingleTimeCommands(commandBuffer);
+  endSingleTimeCommands(commandBuffer);
 }
 
 void vrglasses_for_robots::VulkanRenderer::createTextureImageView() {
-    textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+  textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM,
+                                     VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-VkImageView vrglasses_for_robots::VulkanRenderer::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
-    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewInfo.format = format;
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = 1;
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
+VkImageView vrglasses_for_robots::VulkanRenderer::createImageView(
+    VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
+  VkImageViewCreateInfo viewInfo = {};
+  viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+  viewInfo.image = image;
+  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  viewInfo.format = format;
+  viewInfo.subresourceRange.aspectMask = aspectFlags;
+  viewInfo.subresourceRange.baseMipLevel = 0;
+  viewInfo.subresourceRange.levelCount = 1;
+  viewInfo.subresourceRange.baseArrayLayer = 0;
+  viewInfo.subresourceRange.layerCount = 1;
 
-    VkImageView imageView;
-    if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture image view!");
-    }
+  VkImageView imageView;
+  if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+    throw std::runtime_error("failed to create texture image view!");
+  }
 
-    return imageView;
+  return imageView;
 }
 
 void vrglasses_for_robots::VulkanRenderer::createTextureSampler() {
-    VkSamplerCreateInfo samplerInfo = {};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_NEAREST;
-    samplerInfo.minFilter = VK_FILTER_NEAREST;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_FALSE;
-    samplerInfo.maxAnisotropy = 16;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+  VkSamplerCreateInfo samplerInfo = {};
+  samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  samplerInfo.magFilter = VK_FILTER_NEAREST;
+  samplerInfo.minFilter = VK_FILTER_NEAREST;
+  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.anisotropyEnable = VK_FALSE;
+  samplerInfo.maxAnisotropy = 16;
+  samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+  samplerInfo.unnormalizedCoordinates = VK_FALSE;
+  samplerInfo.compareEnable = VK_FALSE;
+  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+  samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 
-    if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture sampler!");
-    }
+  if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to create texture sampler!");
+  }
 }
 
-VkCommandBuffer vrglasses_for_robots::VulkanRenderer::beginSingleTimeCommands() {
+VkCommandBuffer
+vrglasses_for_robots::VulkanRenderer::beginSingleTimeCommands() {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -1096,8 +1128,9 @@ void vrglasses_for_robots::VulkanRenderer::endSingleTimeCommands(
   vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
 }
 
-void vrglasses_for_robots::VulkanRenderer::copyBuffer(
-    VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void vrglasses_for_robots::VulkanRenderer::copyBuffer(VkBuffer srcBuffer,
+                                                      VkBuffer dstBuffer,
+                                                      VkDeviceSize size) {
   VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
   VkBufferCopy copyRegion = {};
@@ -1111,21 +1144,20 @@ void vrglasses_for_robots::VulkanRenderer::createVertexBuffer() {
   VkDeviceSize bufferSize = sizeof(vertices_[0]) * vertices_.size();
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
-  createBuffer(
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      &stagingBuffer, &stagingBufferMemory, bufferSize);
+  createBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+               &stagingBuffer, &stagingBufferMemory, bufferSize);
 
-  void* data;
+  void *data;
   vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
   memcpy(data, vertices_.data(), static_cast<size_t>(bufferSize));
   vkUnmapMemory(device, stagingBufferMemory);
 
-  createBuffer(
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vertexBuffer, &vertexMemory,
-      bufferSize);
+  createBuffer(VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                   VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vertexBuffer,
+               &vertexMemory, bufferSize);
 
   copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
@@ -1138,21 +1170,20 @@ void vrglasses_for_robots::VulkanRenderer::createIndexBuffer() {
 
   VkBuffer stagingBuffer;
   VkDeviceMemory stagingBufferMemory;
-  createBuffer(
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      &stagingBuffer, &stagingBufferMemory, bufferSize);
+  createBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                   VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+               &stagingBuffer, &stagingBufferMemory, bufferSize);
 
-  void* data;
+  void *data;
   vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
   memcpy(data, indices_.data(), static_cast<size_t>(bufferSize));
   vkUnmapMemory(device, stagingBufferMemory);
 
-  createBuffer(
-      VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &indexBuffer, &indexMemory,
-      bufferSize);
+  createBuffer(VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                   VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &indexBuffer, &indexMemory,
+               bufferSize);
 
   copyBuffer(stagingBuffer, indexBuffer, bufferSize);
 
@@ -1167,20 +1198,22 @@ void vrglasses_for_robots::VulkanRenderer::releaseMeshDataBuffers() {
   vkFreeMemory(device, indexMemory, nullptr);
 }
 
-
 vrglasses_for_robots::VulkanRenderer::VulkanRenderer(
     uint32_t width, uint32_t height, float near, float far,
-    const std::string& shader_vert_spv, const std::string& shader_frag_spv,
-    size_t max_landmark_count, size_t max_indice_count)
-    : width_(width),
-      height_(height),
-      far_(far),
-      near_(near),
-      shader_vert_spv_(shader_vert_spv),
-      shader_frag_spv_(shader_frag_spv),
-      max_landmark_count_(max_landmark_count),
-      max_indice_count_(max_indice_count) {
-    std::cout << "Running headless rendering example\n";
+    const std::string &shader_spv_folder)
+    : width_(width), height_(height), far_(far), near_(near) {
+  std::cout << "Running headless rendering example\n";
+
+  boost::filesystem::path shader_folder =
+      boost::filesystem::path(shader_spv_folder);
+  shader_vert_spv_ =
+      (shader_folder / "vrglasses4robots_shader.vert.spv").string();
+  shader_frag_spv_ =
+      (shader_folder / "vrglasses4robots_shader.frag.spv").string();
+
+  // shader_vert_spv_(shader_vert_spv),
+  //    shader_frag_spv_(shader_frag_spv)
+  // shader_spv_folder
 
   initVulkan(true);
 
@@ -1190,8 +1223,8 @@ vrglasses_for_robots::VulkanRenderer::VulkanRenderer(
 }
 
 void vrglasses_for_robots::VulkanRenderer::buildOpenglProjectionFromIntrinsics(
-    glm::mat4& matPerspective, glm::mat4& matProjection,
-    glm::mat4& matCVProjection, int img_width, int img_height, float alpha,
+    glm::mat4 &matPerspective, glm::mat4 &matProjection,
+    glm::mat4 &matCVProjection, int img_width, int img_height, float alpha,
     float beta, float skew, float u0, float v0, float near, float far) {
   // These parameters define the final viewport that is rendered into by the
   // camera.
@@ -1255,29 +1288,29 @@ void vrglasses_for_robots::VulkanRenderer::buildOpenglProjectionFromIntrinsics(
   matPerspective = ndc * matProjection;
 }
 
-void vrglasses_for_robots::VulkanRenderer::setCamera(
-    float p_focal_u, float p_focal_v, float p_center_u, float p_center_v) {
-  glm::mat4 mv = glm::mat4(1.0);  // convert between opencv to opengl camera
+void vrglasses_for_robots::VulkanRenderer::setCamera(float p_focal_u,
+                                                     float p_focal_v,
+                                                     float p_center_u,
+                                                     float p_center_v) {
+  glm::mat4 mv = glm::mat4(1.0); // convert between opencv to opengl camera
   mv[1][1] = 1.0;
   mv[2][2] = -1.0;
 
   glm::mat4 projection, perpective;
 
-  buildOpenglProjectionFromIntrinsics(
-      perpective, projection, projection_cv_, width_, height_, p_focal_u,
-      p_focal_v, 0, p_center_u, p_center_v, near_, far_);
+  buildOpenglProjectionFromIntrinsics(perpective, projection, projection_cv_,
+                                      width_, height_, p_focal_u, p_focal_v, 0,
+                                      p_center_u, p_center_v, near_, far_);
   mvp_cv_ = perpective * mv;
   //
 }
 
-void vrglasses_for_robots::VulkanRenderer::setCamera(
-    glm::mat4 mvp) {
+void vrglasses_for_robots::VulkanRenderer::setCamera(glm::mat4 mvp) {
   mvp_cv_ = mvp;
 }
 
 void vrglasses_for_robots::VulkanRenderer::renderMesh(
-    cv::Mat& result_depth_map,
-    cv::Mat& result_attribute_map) {
+    cv::Mat &result_depth_map, cv::Mat &result_attribute_map) {
 
   drawTriangles(width_, height_);
 
@@ -1285,12 +1318,10 @@ void vrglasses_for_robots::VulkanRenderer::renderMesh(
   // sparseTest(landmarks_3d, result_depth_map);
 
   vkQueueWaitIdle(queue);
-  //releaseMeshDataBuffers();
+  // releaseMeshDataBuffers();
 }
 
-
 vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
-
 
   vkDestroyBuffer(device, vertexBuffer, nullptr);
   vkFreeMemory(device, vertexMemory, nullptr);
@@ -1340,116 +1371,218 @@ vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
   vkDestroyInstance(instance, nullptr);
 }
 
-void vrglasses_for_robots::VulkanRenderer::loadMesh(const std::string& filename_model_obj,const std::string& filename_texture)
-{
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;
+bool vrglasses_for_robots::VulkanRenderer::loadMesh(
+    const std::string &filename_model_obj,
+    const std::string &filename_texture) {
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string warn, err;
 
-    filename_texture_ = filename_texture;
+  filename_texture_ = filename_texture;
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename_model_obj.c_str())) {
-        throw std::runtime_error(warn + err);
-    }
-
-    std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Vertex vertex = {};
-
-            vertex.pos = {
-                attrib.vertices[3 * index.vertex_index + 0],
-                attrib.vertices[3 * index.vertex_index + 1],
-                attrib.vertices[3 * index.vertex_index + 2]
-            };
-
-            vertex.texCoord = {
-                attrib.texcoords[2 * index.texcoord_index + 0],
-                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-            };
-
-            //vertex.color = {1.0f, 1.0f, 1.0f};
-
-            if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-                vertices_.push_back(vertex);
-            }
-
-            indices_.push_back(uniqueVertices[vertex]);
-        }
-    }
-
-    std::vector<Vertex>& vertices = vertices_;
-    std::vector<uint32_t>& indices = indices_;
-
-    const VkDeviceSize vertexBufferSize = vertices.size() * sizeof(Vertex);
-    const VkDeviceSize indexBufferSize = indices.size() * sizeof(uint32_t);
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingMemory;
-
-    // Command buffer for copy commands (reused)
-    VkCommandBufferAllocateInfo cmdBufAllocateInfo =
-        vks::initializers::commandBufferAllocateInfo(
-            commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-    VkCommandBuffer copyCmd;
-    VK_CHECK_RESULT(
-        vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, &copyCmd));
-    VkCommandBufferBeginInfo cmdBufInfo =
-        vks::initializers::commandBufferBeginInfo();
-
-    // Copy input data to VRAM using a staging buffer
-    {
-      // Vertices
-      createBuffer(
-          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-          &stagingBuffer, &stagingMemory, vertexBufferSize, vertices.data());
-
-      createBuffer(
-          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vertexBuffer, &vertexMemory,
-          vertexBufferSize);
-
-      VK_CHECK_RESULT(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
-      VkBufferCopy copyRegion = {};
-      copyRegion.size = vertexBufferSize;
-      vkCmdCopyBuffer(copyCmd, stagingBuffer, vertexBuffer, 1, &copyRegion);
-      VK_CHECK_RESULT(vkEndCommandBuffer(copyCmd));
-
-      submitWork(copyCmd, queue);
-
-      vkDestroyBuffer(device, stagingBuffer, nullptr);
-      vkFreeMemory(device, stagingMemory, nullptr);
-
-      // Indices
-      createBuffer(
-          VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-              VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-          &stagingBuffer, &stagingMemory, indexBufferSize, indices.data());
-
-      createBuffer(
-          VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &indexBuffer, &indexMemory,
-          indexBufferSize);
-
-      VK_CHECK_RESULT(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
-      copyRegion.size = indexBufferSize;
-      vkCmdCopyBuffer(copyCmd, stagingBuffer, indexBuffer, 1, &copyRegion);
-      VK_CHECK_RESULT(vkEndCommandBuffer(copyCmd));
-
-      submitWork(copyCmd, queue);
-
-      vkDestroyBuffer(device, stagingBuffer, nullptr);
-      vkFreeMemory(device, stagingMemory, nullptr);
-    }
-
-    createTextureImage();
-    createTextureImageView();
-    createTextureSampler();
-    setupDescriptorSet();
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
+                        filename_model_obj.c_str())) {
+    throw std::runtime_error(warn + err);
   }
+
+  std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
+
+  for (const auto &shape : shapes) {
+    for (const auto &index : shape.mesh.indices) {
+      Vertex vertex = {};
+
+      vertex.pos = {attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]};
+
+      vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
+                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+
+      // vertex.color = {1.0f, 1.0f, 1.0f};
+
+      if (uniqueVertices.count(vertex) == 0) {
+        uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
+        vertices_.push_back(vertex);
+      }
+
+      indices_.push_back(uniqueVertices[vertex]);
+    }
+  }
+
+  std::vector<Vertex> &vertices = vertices_;
+  std::vector<uint32_t> &indices = indices_;
+
+  const VkDeviceSize vertexBufferSize = vertices.size() * sizeof(Vertex);
+  const VkDeviceSize indexBufferSize = indices.size() * sizeof(uint32_t);
+
+  VkBuffer stagingBuffer;
+  VkDeviceMemory stagingMemory;
+
+  // Command buffer for copy commands (reused)
+  VkCommandBufferAllocateInfo cmdBufAllocateInfo =
+      vks::initializers::commandBufferAllocateInfo(
+          commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+  VkCommandBuffer copyCmd;
+  VK_CHECK_RESULT(
+      vkAllocateCommandBuffers(device, &cmdBufAllocateInfo, &copyCmd));
+  VkCommandBufferBeginInfo cmdBufInfo =
+      vks::initializers::commandBufferBeginInfo();
+
+  // Copy input data to VRAM using a staging buffer
+  {
+    // Vertices
+    createBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 &stagingBuffer, &stagingMemory, vertexBufferSize,
+                 vertices.data());
+
+    createBuffer(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vertexBuffer,
+                 &vertexMemory, vertexBufferSize);
+
+    VK_CHECK_RESULT(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
+    VkBufferCopy copyRegion = {};
+    copyRegion.size = vertexBufferSize;
+    vkCmdCopyBuffer(copyCmd, stagingBuffer, vertexBuffer, 1, &copyRegion);
+    VK_CHECK_RESULT(vkEndCommandBuffer(copyCmd));
+
+    submitWork(copyCmd, queue);
+
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingMemory, nullptr);
+
+    // Indices
+    createBuffer(VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 &stagingBuffer, &stagingMemory, indexBufferSize,
+                 indices.data());
+
+    createBuffer(VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                     VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &indexBuffer,
+                 &indexMemory, indexBufferSize);
+
+    VK_CHECK_RESULT(vkBeginCommandBuffer(copyCmd, &cmdBufInfo));
+    copyRegion.size = indexBufferSize;
+    vkCmdCopyBuffer(copyCmd, stagingBuffer, indexBuffer, 1, &copyRegion);
+    VK_CHECK_RESULT(vkEndCommandBuffer(copyCmd));
+
+    submitWork(copyCmd, queue);
+
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingMemory, nullptr);
+  }
+
+  createTextureImage();
+  createTextureImageView();
+  createTextureSampler();
+  setupDescriptorSet();
+}
+
+bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
+    const std::string &model_folder, const std::string &model_list) {
+
+  boost::filesystem::path folder = boost::filesystem::path(model_folder);
+  std::vector<std::string> ids;
+  std::vector<std::string> objs;
+  std::vector<std::string> texs;
+
+  if (boost::filesystem::exists(model_list)) {
+    std::ifstream file(model_list.c_str());
+    if (file.is_open()) {
+      std::string line; // eats commas
+
+      while (file >> line) {
+        std::vector<std::string> strs;
+        boost::split(strs, line, boost::is_any_of(";"));
+
+        ids.push_back(strs[0]);
+        objs.push_back(strs[1]);
+        texs.push_back(strs[2]);
+
+        if (!boost::filesystem::exists((folder / objs.back()).string())) {
+          throw std::invalid_argument("the file does not exit: " +
+                                      (folder / objs.back()).string());
+        }
+        if (!boost::filesystem::exists((folder / texs.back()).string())) {
+          throw std::invalid_argument("the file does not exit: " +
+                                      (folder / texs.back()).string());
+        }
+      }
+      if (ids.size() == 0) {
+        throw std::invalid_argument("no valid model in the file");
+      }
+    } else {
+      throw std::invalid_argument("file could not be opened");
+    }
+  } else {
+    throw std::invalid_argument("model list file could not be opened ");
+  }
+
+  loadMesh((folder / objs.back()).string(), (folder / texs.back()).string());
+
+  return true;
+}
+bool vrglasses_for_robots::VulkanRenderer::loadVertex(
+    const std::string &filename_model_obj,
+    const std::string &filename_texture) {
+
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string warn, err;
+
+  filename_texture_ = filename_texture;
+
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
+                        filename_model_obj.c_str())) {
+    throw std::runtime_error(warn + err);
+  }
+
+  std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
+
+  for (const auto &shape : shapes) {
+    for (const auto &index : shape.mesh.indices) {
+      Vertex vertex = {};
+
+      vertex.pos = {attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]};
+
+      vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
+                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+
+      // vertex.color = {1.0f, 1.0f, 1.0f};
+
+      if (uniqueVertices.count(vertex) == 0) {
+        uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
+        vertices_.push_back(vertex);
+      }
+
+      indices_.push_back(uniqueVertices[vertex]);
+    }
+  }
+
+  return true;
+
+}
+
+// void vrglasses_for_robots::VulkanRenderer::loadMeshs(
+//    const std::string &filename_model_list) {
+//
+//
+//
+////  tinyobj::attrib_t attrib;
+////  std::vector<tinyobj::shape_t> shapes;
+////  std::vector<tinyobj::material_t> materials;
+////  std::string warn, err;
+////
+////  filename_texture_ = filename_texture;
+////
+////  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
+///filename_model_obj.c_str())) { /    throw std::runtime_error(warn + err); / }
+//}

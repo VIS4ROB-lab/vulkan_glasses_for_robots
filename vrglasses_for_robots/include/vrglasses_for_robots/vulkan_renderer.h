@@ -150,7 +150,7 @@ class VulkanRenderer {
 
   std::vector<Vertex> vertices_;
   std::vector<uint32_t> indices_;
-  size_t max_landmark_count_, max_indice_count_;
+  //size_t max_landmark_count_, max_indice_count_;
 
   glm::mat4 mvp_cv_, projection_cv_;
 
@@ -221,21 +221,33 @@ class VulkanRenderer {
   void setupDescriptorPool();
   void setupDescriptorSet();
 public:
+//  VulkanRenderer(
+//      uint32_t width, uint32_t height, float near, float far,
+//      const std::string& shader_vert_spv =
+//          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
+//          "vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv",
+//      const std::string& shader_frag_spv =
+//          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
+//          "vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv",
+//      size_t max_landmark_count = 1000, size_t max_indice_count = 3000);
+
   VulkanRenderer(
-      uint32_t width, uint32_t height, float near, float far,
-      const std::string& shader_vert_spv =
-          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
-          "vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv",
-      const std::string& shader_frag_spv =
-          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
-          "vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv",
-      size_t max_landmark_count = 1000, size_t max_indice_count = 3000);
+      uint32_t width,
+      uint32_t height,
+      float near,
+      float far,
+      const std::string& shader_spv_folder
+      );
 
   void setCamera(
       float p_focal_u, float p_focal_v, float p_center_u, float p_center_v);
   void setCamera(glm::mat4 mvp);
 
-  void loadMesh(const std::string &filename_model_obj, const std::string &filename_texture);
+  bool loadMeshs(const std::string &model_folder, const std::string &model_list);
+
+  bool loadMesh(const std::string &filename_model_obj, const std::string &filename_texture);
+
+  bool loadVertex(const std::string &filename_model_obj, const std::string &filename_texture);
 
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map);
 

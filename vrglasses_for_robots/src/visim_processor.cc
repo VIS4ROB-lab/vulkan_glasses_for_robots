@@ -38,7 +38,7 @@ void VisimProcessor::runHeadless()
 {
     VisimProject project =  visim_data_source_->getProject();
     double near = 0.1, far = 500.0;
-    vrglasses_for_robots::VulkanRenderer app = vrglasses_for_robots::VulkanRenderer(project.w,project.h,near,far);
+    vrglasses_for_robots::VulkanRenderer app = vrglasses_for_robots::VulkanRenderer(project.w,project.h,near,far,"/media/secssd/code/vrglasses4robots");
     cv::Mat result_depth_map, result_rgb_map, result_semantic_map;
 
     app.loadMesh("/media/secssd/code/vrglasses4robots/data/models/50s_house_v2_45_3_Zu_Xf.obj","/media/secssd/code/vrglasses4robots/data/textures/new_texture_small.tga");

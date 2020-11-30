@@ -56,10 +56,7 @@ void VRGlassesNode::run()
     {
         ROS_ERROR("shader_folder not defined");
     }
-    std::string shader_vert_spv =
-        shader_folder + "/vrglasses4robots_shader.vert.spv";
-    std::string shader_frag_spv =
-        shader_folder + "/vrglasses4robots_shader.frag.spv";
+    
 
     // ROS Parameters
     nh_private_.param("render_far",far_,far_);    
@@ -67,7 +64,7 @@ void VRGlassesNode::run()
     nh_private_.param("render_near",near_,near_);    
 
     renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
-          visim_project_.h, near_, far_, shader_vert_spv, shader_frag_spv);
+          visim_project_.h, near_, far_, shader_folder);
     glm::mat4 empty;
     buildOpenglProjectionFromIntrinsics(perpective_, empty, 
             visim_project_.w, visim_project_.h, visim_project_.f,
@@ -75,18 +72,23 @@ void VRGlassesNode::run()
 
     std::string mesh_obj_file;
     std::string texture_file;
-    if(!nh_private_.getParam("mesh_obj_file", mesh_obj_file))
+    std::string model_folder;
+    std::string model_list_file;
+
+    if(nh_private_.getParam("model_folder", model_folder) && nh_private_.getParam("model_list_file", model_list_file))
     {
-        ROS_ERROR("mesh_obj_file parameter not defined");
+        renderer_->loadMeshs(model_folder,model_list_file);
+    } 
+    else if( nh_private_.getParam("mesh_obj_file", mesh_obj_file) && nh_private_.getParam("texture_file", texture_file))
+    {
+        // Load Mesh
+        renderer_->loadMesh(mesh_obj_file,texture_file);        
+    }else{
+        ROS_ERROR("mesh_obj_file and texture_file need to be defined parameter, alternatively model_folder and model_list_file");
     }
 
-    if(!nh_private_.getParam("texture_file", texture_file))
-    {
-        ROS_ERROR("texture_file parameter not defined");
-    }
 
-    // Load Mesh
-    renderer_->loadMesh(mesh_obj_file,texture_file);
+    
     
     while (::ros::ok()) {
       ::ros::spinOnce();
