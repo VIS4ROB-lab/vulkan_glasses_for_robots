@@ -1403,9 +1403,9 @@ bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
         boost::split(strs, line, boost::is_any_of(";"));
 
         models_.push_back(ThreeDModel());
-        models_.back().name = strs[0];
-        models_.back().obj_file = (folder / strs[1]).string();
-        models_.back().texture_file = (folder / strs[2]).string();
+        models_.back().name = boost::trim_copy(strs[0]);
+        models_.back().obj_file = (folder / boost::trim_copy(strs[1])).string();
+        models_.back().texture_file = (folder / boost::trim_copy(strs[2])).string();
         models_index_[models_.back().name] = models_.size() - 1;
 
         if (!boost::filesystem::exists(models_.back().obj_file)) {
