@@ -8,6 +8,8 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <opencv2/imgproc.hpp>
 #include <unordered_map>
 
@@ -584,20 +586,27 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
     vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
                             pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
-    vkCmdPushConstants(commandBuffer, pipelineLayout,
-                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp_cv_),
-                       &mvp_cv_);
+    for (size_t idx = 0; idx < scene_items_.size(); idx++) {
+      // std::cout << models_[idx].begin_vertex_count << "count-index " <<
+      // models_[idx].begin_vertex_index << std::endl;
 
-    vkCmdDrawIndexed(commandBuffer, std::floor(indices_.size() / 2), 1, 0, 0,
-                     0);
+      glm::mat4 mvp_cv = vp_cv_ * scene_items_[idx].T_World2Model;
 
-    // mvp_cv_ = glm::translate( mvp_cv_, glm::vec3(0,0,10) );
-    vkCmdPushConstants(commandBuffer, pipelineLayout,
-                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp_cv_),
-                       &mvp_cv_);
-    vkCmdDrawIndexed(commandBuffer,
-                     indices_.size() - std::floor(indices_.size() / 2), 1,
-                     std::floor(indices_.size() / 2), 0, 0);
+      vkCmdPushConstants(commandBuffer, pipelineLayout,
+                         VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp_cv),
+                         &mvp_cv);
+      size_t model_idx = models_index_[scene_items_[idx].model_name];
+      vkCmdDrawIndexed(commandBuffer, models_[model_idx].begin_vertex_count, 1,
+                       models_[model_idx].begin_vertex_index, 0, 0);
+    }
+
+    //     vp_cv_ = glm::translate( vp_cv_, glm::vec3(0,0,50) );
+    //    vkCmdPushConstants(commandBuffer, pipelineLayout,
+    //                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vp_cv_),
+    //                       &vp_cv_);
+    //    vkCmdDrawIndexed(commandBuffer,
+    //                     indices_.size() - std::floor(indices_.size() / 2), 1,
+    //                     std::floor(indices_.size() / 2), 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -832,7 +841,7 @@ void vrglasses_for_robots::VulkanRenderer::setupDescriptorSet() {
   std::vector<VkWriteDescriptorSet> writeDescriptorSets = {
       // Binding 1 : Fragment shader texture sampler
       //	Fragment shader: layout (binding = 0) uniform sampler2D
-      //samplerColor;
+      // samplerColor;
       vks::initializers::writeDescriptorSet(
           descriptorSet,
           VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // The descriptor set will
@@ -901,7 +910,8 @@ void vrglasses_for_robots::VulkanRenderer::createTextureImage() {
   VkDeviceSize imageSize = texWidth * texHeight * 4;
 
   if (!pixels) {
-    throw std::runtime_error("failed to load texture image!");
+    throw std::runtime_error("failed to load texture image! <" +
+                             filename_texture_ + ">");
   }
 
   VkBuffer stagingBuffer;
@@ -1301,12 +1311,12 @@ void vrglasses_for_robots::VulkanRenderer::setCamera(float p_focal_u,
   buildOpenglProjectionFromIntrinsics(perpective, projection, projection_cv_,
                                       width_, height_, p_focal_u, p_focal_v, 0,
                                       p_center_u, p_center_v, near_, far_);
-  mvp_cv_ = perpective * mv;
+  vp_cv_ = perpective * mv;
   //
 }
 
 void vrglasses_for_robots::VulkanRenderer::setCamera(glm::mat4 mvp) {
-  mvp_cv_ = mvp;
+  vp_cv_ = mvp;
 }
 
 void vrglasses_for_robots::VulkanRenderer::renderMesh(
@@ -1371,22 +1381,84 @@ vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
   vkDestroyInstance(instance, nullptr);
 }
 
-bool vrglasses_for_robots::VulkanRenderer::loadMesh(
-    const std::string &filename_model_obj,
-    const std::string &filename_texture) {
+bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
+    const std::string &model_folder, const std::string &model_list) {
+
+  boost::filesystem::path folder = boost::filesystem::path(model_folder);
+  std::vector<std::string> ids;
+  std::vector<std::string> objs;
+  std::vector<std::string> texs;
+
+  if (boost::filesystem::exists(model_list)) {
+    std::ifstream file(model_list.c_str());
+    if (file.is_open()) {
+      std::string line;
+
+      while (std::getline(file, line)) {
+        boost::trim(line);
+        if (line.empty())
+          continue;
+
+        std::vector<std::string> strs;
+        boost::split(strs, line, boost::is_any_of(";"));
+
+        models_.push_back(ThreeDModel());
+        models_.back().name = strs[0];
+        models_.back().obj_file = (folder / strs[1]).string();
+        models_.back().texture_file = (folder / strs[2]).string();
+        models_index_[models_.back().name] = models_.size() - 1;
+
+        if (!boost::filesystem::exists(models_.back().obj_file)) {
+          throw std::invalid_argument("the file does not exit: " +
+                                      models_.back().obj_file);
+        }
+        if (!boost::filesystem::exists(models_.back().texture_file)) {
+          throw std::invalid_argument("the file does not exit: " +
+                                      models_.back().texture_file);
+        }
+      }
+      if (models_.size() == 0) {
+        throw std::invalid_argument("no valid model in the file");
+      }
+    } else {
+      throw std::invalid_argument("file could not be opened");
+    }
+  } else {
+    throw std::invalid_argument("model list file could not be opened ");
+  }
+  // load geometry
+  for (size_t idx = 0; idx < models_.size(); idx++) {
+    loadVertex(idx);
+    models_[idx].material_index = idx;
+  }
+
+  // load textures
+  for (size_t idx = 0; idx < models_.size(); idx++) {
+    // loadTexture( models_[idx].texture_file);
+    filename_texture_ = models_[idx].texture_file;
+    std::cout << filename_texture_ << "!! " << std::endl;
+  }
+
+  copyVertex();
+
+  return true;
+}
+
+bool vrglasses_for_robots::VulkanRenderer::loadVertex(const size_t model_idx) {
+
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
   std::string warn, err;
 
-  filename_texture_ = filename_texture;
-
   if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
-                        filename_model_obj.c_str())) {
+                        models_[model_idx].obj_file.c_str())) {
     throw std::runtime_error(warn + err);
   }
 
   std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
+
+  models_[model_idx].begin_vertex_index = indices_.size();
 
   for (const auto &shape : shapes) {
     for (const auto &index : shape.mesh.indices) {
@@ -1409,6 +1481,14 @@ bool vrglasses_for_robots::VulkanRenderer::loadMesh(
       indices_.push_back(uniqueVertices[vertex]);
     }
   }
+
+  models_[model_idx].begin_vertex_count =
+      indices_.size() - models_[model_idx].begin_vertex_index;
+
+  return true;
+}
+
+void vrglasses_for_robots::VulkanRenderer::copyVertex() {
 
   std::vector<Vertex> &vertices = vertices_;
   std::vector<uint32_t> &indices = indices_;
@@ -1483,38 +1563,34 @@ bool vrglasses_for_robots::VulkanRenderer::loadMesh(
   setupDescriptorSet();
 }
 
-bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
-    const std::string &model_folder, const std::string &model_list) {
+glm::mat4 parsePose(std::string pose_text) {
+  std::vector<std::string> strs;
+  boost::split(strs, pose_text, boost::is_any_of(" "));
+  glm::mat4 result = glm::translate(
+      glm::mat4(1.0),
+      glm::vec3(std::stod(strs[0]), std::stod(strs[1]), std::stod(strs[2])));
+  result *= glm::eulerAngleZ((float)glm::radians(std::stod(strs[3])));
+  return result;
+}
 
-  boost::filesystem::path folder = boost::filesystem::path(model_folder);
-  std::vector<std::string> ids;
-  std::vector<std::string> objs;
-  std::vector<std::string> texs;
+bool vrglasses_for_robots::VulkanRenderer::loadScene(
+    const std::string &scene_file) {
 
-  if (boost::filesystem::exists(model_list)) {
-    std::ifstream file(model_list.c_str());
+  if (boost::filesystem::exists(scene_file)) {
+    std::ifstream file(scene_file.c_str());
     if (file.is_open()) {
-      std::string line; // eats commas
+      std::string line;
 
-      while (file >> line) {
+      while (std::getline(file, line)) {
+        boost::trim(line);
+        if (line.empty())
+          continue;
+
         std::vector<std::string> strs;
         boost::split(strs, line, boost::is_any_of(";"));
-
-        ids.push_back(strs[0]);
-        objs.push_back(strs[1]);
-        texs.push_back(strs[2]);
-
-        if (!boost::filesystem::exists((folder / objs.back()).string())) {
-          throw std::invalid_argument("the file does not exit: " +
-                                      (folder / objs.back()).string());
-        }
-        if (!boost::filesystem::exists((folder / texs.back()).string())) {
-          throw std::invalid_argument("the file does not exit: " +
-                                      (folder / texs.back()).string());
-        }
-      }
-      if (ids.size() == 0) {
-        throw std::invalid_argument("no valid model in the file");
+        scene_items_.push_back(SceneItem());
+        scene_items_.back().model_name = strs[0];
+        scene_items_.back().T_World2Model = parsePose(strs[1]);
       }
     } else {
       throw std::invalid_argument("file could not be opened");
@@ -1522,67 +1598,5 @@ bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
   } else {
     throw std::invalid_argument("model list file could not be opened ");
   }
-
-  loadMesh((folder / objs.back()).string(), (folder / texs.back()).string());
-
   return true;
 }
-bool vrglasses_for_robots::VulkanRenderer::loadVertex(
-    const std::string &filename_model_obj,
-    const std::string &filename_texture) {
-
-  tinyobj::attrib_t attrib;
-  std::vector<tinyobj::shape_t> shapes;
-  std::vector<tinyobj::material_t> materials;
-  std::string warn, err;
-
-  filename_texture_ = filename_texture;
-
-  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
-                        filename_model_obj.c_str())) {
-    throw std::runtime_error(warn + err);
-  }
-
-  std::unordered_map<Vertex, uint32_t> uniqueVertices = {};
-
-  for (const auto &shape : shapes) {
-    for (const auto &index : shape.mesh.indices) {
-      Vertex vertex = {};
-
-      vertex.pos = {attrib.vertices[3 * index.vertex_index + 0],
-                    attrib.vertices[3 * index.vertex_index + 1],
-                    attrib.vertices[3 * index.vertex_index + 2]};
-
-      vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
-                         1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
-
-      // vertex.color = {1.0f, 1.0f, 1.0f};
-
-      if (uniqueVertices.count(vertex) == 0) {
-        uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-        vertices_.push_back(vertex);
-      }
-
-      indices_.push_back(uniqueVertices[vertex]);
-    }
-  }
-
-  return true;
-
-}
-
-// void vrglasses_for_robots::VulkanRenderer::loadMeshs(
-//    const std::string &filename_model_list) {
-//
-//
-//
-////  tinyobj::attrib_t attrib;
-////  std::vector<tinyobj::shape_t> shapes;
-////  std::vector<tinyobj::material_t> materials;
-////  std::string warn, err;
-////
-////  filename_texture_ = filename_texture;
-////
-////  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err,
-///filename_model_obj.c_str())) { /    throw std::runtime_error(warn + err); / }
-//}

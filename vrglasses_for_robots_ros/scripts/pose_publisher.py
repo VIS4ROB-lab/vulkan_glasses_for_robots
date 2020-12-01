@@ -11,8 +11,8 @@ def publisher():
         p = Odometry()
         p.header.stamp = rospy.Time.now()
         p.pose.pose.position.x = -60
-        p.pose.pose.position.y = -20
-        p.pose.pose.position.z = 15.0
+        p.pose.pose.position.y = -30
+        p.pose.pose.position.z = 30.0
         # Make sure the quaternion is valid and normalized
         p.pose.pose.orientation.x = 0.0
         p.pose.pose.orientation.y = 0.0

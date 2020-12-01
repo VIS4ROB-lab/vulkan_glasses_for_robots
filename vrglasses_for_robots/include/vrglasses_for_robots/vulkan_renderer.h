@@ -13,6 +13,8 @@
 #include <glog/logging.h>
 #include <opencv2/core.hpp>
 #include <Eigen/Core>
+#include <map>
+#include <vector>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -91,7 +93,26 @@ namespace std {
 
 namespace vrglasses_for_robots {
 
+struct ThreeDModel{
+  std::string name;
+  std::string obj_file;
+  std::string texture_file;
+  long unsigned int begin_vertex_index;
+  long unsigned int begin_vertex_count;
+  size_t material_index;
 
+  ThreeDModel():name("none"),obj_file("none"),texture_file("none"),begin_vertex_index(0),begin_vertex_count(0),material_index(9999){
+
+  }
+};
+
+struct SceneItem{
+  std::string model_name;
+  glm::mat4 T_World2Model;
+  SceneItem():model_name("none"){
+    T_World2Model = glm::mat4(1.0);
+  }
+};
 
 class VulkanRenderer {
  private:
@@ -151,8 +172,12 @@ class VulkanRenderer {
   std::vector<Vertex> vertices_;
   std::vector<uint32_t> indices_;
   //size_t max_landmark_count_, max_indice_count_;
+  std::vector<ThreeDModel> models_;
+  std::map<std::string,size_t> models_index_;
+  std::vector<SceneItem> scene_items_;
 
-  glm::mat4 mvp_cv_, projection_cv_;
+
+  glm::mat4 vp_cv_, projection_cv_;
 
   VkFramebuffer framebuffer;
   FrameBufferAttachment colorAttachment, depthAttachment;
@@ -245,13 +270,20 @@ public:
 
   bool loadMeshs(const std::string &model_folder, const std::string &model_list);
 
-  bool loadMesh(const std::string &filename_model_obj, const std::string &filename_texture);
+  bool loadScene(const std::string &scene_file);
 
-  bool loadVertex(const std::string &filename_model_obj, const std::string &filename_texture);
+  //bool loadMesh(const std::string &filename_model_obj, const std::string &filename_texture);
+
+  //bool loadVertex(const std::string &filename_model_obj, const std::string &filename_texture);
+
+  void copyVertex();
 
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map);
 
   ~VulkanRenderer();
 
+  //void loadMeshs(const std::string &filename_model_obj);
+  //bool loadVertex(const std::string &filename_model_obj);
+  bool loadVertex(const size_t model_idx);
 };
 }

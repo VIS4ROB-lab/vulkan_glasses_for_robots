@@ -74,16 +74,20 @@ void VRGlassesNode::run()
     std::string texture_file;
     std::string model_folder;
     std::string model_list_file;
+    std::string model_pose_file;
 
-    if(nh_private_.getParam("model_folder", model_folder) && nh_private_.getParam("model_list_file", model_list_file))
+    if(nh_private_.getParam("model_folder", model_folder) && nh_private_.getParam("model_list_file", model_list_file) && nh_private_.getParam("model_pose_file", model_pose_file))
     {
         renderer_->loadMeshs(model_folder,model_list_file);
+        renderer_->loadScene(model_pose_file);
+        
     } 
-    else if( nh_private_.getParam("mesh_obj_file", mesh_obj_file) && nh_private_.getParam("texture_file", texture_file))
-    {
-        // Load Mesh
-        renderer_->loadMesh(mesh_obj_file,texture_file);        
-    }else{
+    // else if( nh_private_.getParam("mesh_obj_file", mesh_obj_file) && nh_private_.getParam("texture_file", texture_file))
+    // {
+    //     // Load Mesh
+    //     renderer_->loadMesh(mesh_obj_file,texture_file);        
+    // }
+    else{
         ROS_ERROR("mesh_obj_file and texture_file need to be defined parameter, alternatively model_folder and model_list_file");
     }
 
