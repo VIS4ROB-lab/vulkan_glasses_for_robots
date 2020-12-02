@@ -526,7 +526,7 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(uint32_t width,
                  &image_buffer, &image_buffer_memory, mem_size);
   }
 
-  setupDescriptorPool();
+
 }
 
 void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
@@ -583,12 +583,11 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
     for (size_t idx = 0; idx < scene_items_.size(); idx++) {
       // std::cout << models_[idx].begin_vertex_count << "count-index " <<
       // models_[idx].begin_vertex_index << std::endl;
+
 
       glm::mat4 mvp_cv = vp_cv_ * scene_items_[idx].T_World2Model;
 
@@ -596,6 +595,9 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
                          VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp_cv),
                          &mvp_cv);
       size_t model_idx = models_index_[scene_items_[idx].model_name];
+      vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              pipelineLayout, 0, 1, &textures_[models_[model_idx].material_index].descriptorSet, 0, nullptr);
+
       vkCmdDrawIndexed(commandBuffer, models_[model_idx].begin_vertex_count, 1,
                        models_[model_idx].begin_vertex_index, 0, 0);
     }
@@ -805,32 +807,34 @@ void vrglasses_for_robots::VulkanRenderer::setupDescriptorPool() {
   // Example uses one ubo and one image sampler
   std::vector<VkDescriptorPoolSize> poolSizes = {
       vks::initializers::descriptorPoolSize(
-          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1)};
+          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(textures_.size()))};
+
+  std::cout << " pool size: " << static_cast<uint32_t>(textures_.size()) << std::endl;
 
   VkDescriptorPoolCreateInfo descriptorPoolInfo =
       vks::initializers::descriptorPoolCreateInfo(
-          static_cast<uint32_t>(poolSizes.size()), poolSizes.data(), 1);
+          static_cast<uint32_t>(poolSizes.size()), poolSizes.data(), static_cast<uint32_t>(textures_.size())+1);
 
   VK_CHECK_RESULT(vkCreateDescriptorPool(device, &descriptorPoolInfo, nullptr,
                                          &descriptorPool));
 }
 
-void vrglasses_for_robots::VulkanRenderer::setupDescriptorSet() {
+void vrglasses_for_robots::VulkanRenderer::setupDescriptorSet(Texture2D &tex) {
   VkDescriptorSetAllocateInfo allocInfo =
       vks::initializers::descriptorSetAllocateInfo(descriptorPool,
                                                    &descriptorSetLayout, 1);
 
-  VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet));
+  VK_CHECK_RESULT(vkAllocateDescriptorSets(device, &allocInfo, &(tex.descriptorSet)));
 
   // Setup a descriptor image info for the current texture to be used as a
   // combined image sampler
   VkDescriptorImageInfo textureDescriptor;
   textureDescriptor.imageView =
-      textureImageView; // The image's view (images are never directly accessed
+      tex.textureImageView; // The image's view (images are never directly accessed
                         // by the shader, but rather through views defining
                         // subresources)
   textureDescriptor.sampler =
-      textureSampler; // The sampler (Telling the pipeline how to sample the
+      tex.textureSampler; // The sampler (Telling the pipeline how to sample the
                       // texture, including repeat, border, etc.)
   textureDescriptor.imageLayout =
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // The current layout of the
@@ -843,7 +847,7 @@ void vrglasses_for_robots::VulkanRenderer::setupDescriptorSet() {
       //	Fragment shader: layout (binding = 0) uniform sampler2D
       // samplerColor;
       vks::initializers::writeDescriptorSet(
-          descriptorSet,
+          tex.descriptorSet,
           VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // The descriptor set will
                                                      // use a combined image
                                                      // sampler (sampler and
@@ -903,15 +907,15 @@ uint32_t vrglasses_for_robots::VulkanRenderer::findMemoryType(
   throw std::runtime_error("failed to find suitable memory type!");
 }
 
-void vrglasses_for_robots::VulkanRenderer::createTextureImage() {
+void vrglasses_for_robots::VulkanRenderer::createTextureImage(Texture2D &tex,std::string filename_texture) {
   int texWidth, texHeight, texChannels;
-  stbi_uc *pixels = stbi_load(filename_texture_.c_str(), &texWidth, &texHeight,
+  stbi_uc *pixels = stbi_load(filename_texture.c_str(), &texWidth, &texHeight,
                               &texChannels, STBI_rgb_alpha);
   VkDeviceSize imageSize = texWidth * texHeight * 4;
 
   if (!pixels) {
     throw std::runtime_error("failed to load texture image! <" +
-                             filename_texture_ + ">");
+                                 filename_texture + ">");
   }
 
   VkBuffer stagingBuffer;
@@ -931,20 +935,48 @@ void vrglasses_for_robots::VulkanRenderer::createTextureImage() {
   createImage(
       texWidth, texHeight, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, tex.textureImage, tex.textureImageMemory);
 
-  transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM,
+  transitionImageLayout(tex.textureImage, VK_FORMAT_R8G8B8A8_UNORM,
                         VK_IMAGE_LAYOUT_UNDEFINED,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  copyBufferToImage(stagingBuffer, textureImage,
+  copyBufferToImage(stagingBuffer, tex.textureImage,
                     static_cast<uint32_t>(texWidth),
                     static_cast<uint32_t>(texHeight));
-  transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_UNORM,
+  transitionImageLayout(tex.textureImage, VK_FORMAT_R8G8B8A8_UNORM,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   vkDestroyBuffer(device, stagingBuffer, nullptr);
   vkFreeMemory(device, stagingBufferMemory, nullptr);
+
+
+  //================================
+
+  tex.textureImageView = createImageView(tex.textureImage, VK_FORMAT_R8G8B8A8_UNORM,
+                                         VK_IMAGE_ASPECT_COLOR_BIT);
+
+  //================================
+
+  VkSamplerCreateInfo samplerInfo = {};
+  samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  samplerInfo.magFilter = VK_FILTER_NEAREST;
+  samplerInfo.minFilter = VK_FILTER_NEAREST;
+  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.anisotropyEnable = VK_FALSE;
+  samplerInfo.maxAnisotropy = 16;
+  samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+  samplerInfo.unnormalizedCoordinates = VK_FALSE;
+  samplerInfo.compareEnable = VK_FALSE;
+  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+  samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+
+  if (vkCreateSampler(device, &samplerInfo, nullptr, &tex.textureSampler) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("failed to create texture sampler!");
+  }
 }
 
 void vrglasses_for_robots::VulkanRenderer::copyBufferToImage(VkBuffer buffer,
@@ -1056,8 +1088,7 @@ void vrglasses_for_robots::VulkanRenderer::transitionImageLayout(
 }
 
 void vrglasses_for_robots::VulkanRenderer::createTextureImageView() {
-  textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM,
-                                     VK_IMAGE_ASPECT_COLOR_BIT);
+
 }
 
 VkImageView vrglasses_for_robots::VulkanRenderer::createImageView(
@@ -1082,25 +1113,7 @@ VkImageView vrglasses_for_robots::VulkanRenderer::createImageView(
 }
 
 void vrglasses_for_robots::VulkanRenderer::createTextureSampler() {
-  VkSamplerCreateInfo samplerInfo = {};
-  samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-  samplerInfo.magFilter = VK_FILTER_NEAREST;
-  samplerInfo.minFilter = VK_FILTER_NEAREST;
-  samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.anisotropyEnable = VK_FALSE;
-  samplerInfo.maxAnisotropy = 16;
-  samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-  samplerInfo.unnormalizedCoordinates = VK_FALSE;
-  samplerInfo.compareEnable = VK_FALSE;
-  samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-  samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 
-  if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("failed to create texture sampler!");
-  }
 }
 
 VkCommandBuffer
@@ -1350,12 +1363,12 @@ vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
   vkDestroyImageView(device, depthAttachment.view, nullptr);
   vkDestroyImage(device, depthAttachment.image, nullptr);
   vkFreeMemory(device, depthAttachment.memory, nullptr);
-
-  vkDestroySampler(device, textureSampler, nullptr);
-  vkDestroyImageView(device, textureImageView, nullptr);
-  vkDestroyImage(device, textureImage, nullptr);
-  vkFreeMemory(device, textureImageMemory, nullptr);
-
+  for(size_t i=0;i<textures_.size();i++) {
+    vkDestroySampler(device, textures_[i].textureSampler, nullptr);
+    vkDestroyImageView(device, textures_[i].textureImageView, nullptr);
+    vkDestroyImage(device, textures_[i].textureImage, nullptr);
+    vkFreeMemory(device, textures_[i].textureImageMemory, nullptr);
+  }
   vkDestroyDescriptorPool(device, descriptorPool, nullptr);
 
   vkDestroyRenderPass(device, renderPass, nullptr);
@@ -1432,11 +1445,21 @@ bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
     models_[idx].material_index = idx;
   }
 
+
+
   // load textures
+  textures_.resize(models_.size());
+
+  setupDescriptorPool();
   for (size_t idx = 0; idx < models_.size(); idx++) {
     // loadTexture( models_[idx].texture_file);
-    filename_texture_ = models_[idx].texture_file;
-    std::cout << filename_texture_ << "!! " << std::endl;
+//    filename_texture_ = models_[idx].texture_file;
+//    std::cout << filename_texture_ << "!! " << std::endl;
+    models_[idx].material_index = idx;
+    createTextureImage(textures_[idx],models_[idx].texture_file);
+//    createTextureImageView();
+//    createTextureSampler();
+    setupDescriptorSet(textures_[idx]);
   }
 
   copyVertex();
@@ -1557,10 +1580,7 @@ void vrglasses_for_robots::VulkanRenderer::copyVertex() {
     vkFreeMemory(device, stagingMemory, nullptr);
   }
 
-  createTextureImage();
-  createTextureImageView();
-  createTextureSampler();
-  setupDescriptorSet();
+
 }
 
 glm::mat4 parsePose(std::string pose_text) {

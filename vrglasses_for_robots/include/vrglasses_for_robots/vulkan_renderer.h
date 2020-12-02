@@ -114,6 +114,15 @@ struct SceneItem{
   }
 };
 
+struct Texture2D{
+  VkImage textureImage;
+  VkDeviceMemory textureImageMemory;
+  VkImageView textureImageView;
+  VkSampler textureSampler;
+
+  VkDescriptorSet descriptorSet;
+};
+
 class VulkanRenderer {
  private:
   VkInstance instance;
@@ -138,16 +147,12 @@ class VulkanRenderer {
   VkBuffer image_buffer;
   VkDeviceMemory image_buffer_memory;
 
-  VkImage textureImage;
-  VkDeviceMemory textureImageMemory;
-  VkImageView textureImageView;
-  VkSampler textureSampler;
-
   VkDescriptorPool descriptorPool;
-  VkDescriptorSet descriptorSet;
+
+
 
   uint32_t width_, height_;
-  std::string filename_texture_;
+
   std::string shader_vert_spv_;
   std::string shader_frag_spv_;
   float far_, near_;
@@ -175,6 +180,8 @@ class VulkanRenderer {
   std::vector<ThreeDModel> models_;
   std::map<std::string,size_t> models_index_;
   std::vector<SceneItem> scene_items_;
+
+  std::vector<Texture2D> textures_;
 
 
   glm::mat4 vp_cv_, projection_cv_;
@@ -234,9 +241,11 @@ class VulkanRenderer {
 
   float convertZbufferToDepth(float near, float far, float zValue);
 
-  void createTextureImage();
+  void createTextureImage(Texture2D &tex, std::string filename_texture);
   void createTextureImageView();
   void createTextureSampler();
+  void setupDescriptorSet(Texture2D &tex);
+
   void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
   uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
   void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &imageMemory);
@@ -244,7 +253,7 @@ class VulkanRenderer {
   VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
   void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
   void setupDescriptorPool();
-  void setupDescriptorSet();
+
 public:
 //  VulkanRenderer(
 //      uint32_t width, uint32_t height, float near, float far,
@@ -285,5 +294,6 @@ public:
   //void loadMeshs(const std::string &filename_model_obj);
   //bool loadVertex(const std::string &filename_model_obj);
   bool loadVertex(const size_t model_idx);
+
 };
 }
