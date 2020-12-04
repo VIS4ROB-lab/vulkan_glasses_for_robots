@@ -242,8 +242,6 @@ class VulkanRenderer {
   float convertZbufferToDepth(float near, float far, float zValue);
 
   void createTextureImage(Texture2D &tex, std::string filename_texture);
-  void createTextureImageView();
-  void createTextureSampler();
   void setupDescriptorSet(Texture2D &tex);
 
   void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
@@ -255,15 +253,6 @@ class VulkanRenderer {
   void setupDescriptorPool();
 
 public:
-//  VulkanRenderer(
-//      uint32_t width, uint32_t height, float near, float far,
-//      const std::string& shader_vert_spv =
-//          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
-//          "vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv",
-//      const std::string& shader_frag_spv =
-//          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
-//          "vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv",
-//      size_t max_landmark_count = 1000, size_t max_indice_count = 3000);
 
   VulkanRenderer(
       uint32_t width,
@@ -280,10 +269,6 @@ public:
   bool loadMeshs(const std::string &model_folder, const std::string &model_list);
 
   bool loadScene(const std::string &scene_file);
-
-  //bool loadMesh(const std::string &filename_model_obj, const std::string &filename_texture);
-
-  //bool loadVertex(const std::string &filename_model_obj, const std::string &filename_texture);
 
   void copyVertex();
 

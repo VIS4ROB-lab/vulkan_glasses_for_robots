@@ -809,8 +809,6 @@ void vrglasses_for_robots::VulkanRenderer::setupDescriptorPool() {
       vks::initializers::descriptorPoolSize(
           VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(textures_.size()))};
 
-  std::cout << " pool size: " << static_cast<uint32_t>(textures_.size()) << std::endl;
-
   VkDescriptorPoolCreateInfo descriptorPoolInfo =
       vks::initializers::descriptorPoolCreateInfo(
           static_cast<uint32_t>(poolSizes.size()), poolSizes.data(), static_cast<uint32_t>(textures_.size())+1);
@@ -1087,9 +1085,6 @@ void vrglasses_for_robots::VulkanRenderer::transitionImageLayout(
   endSingleTimeCommands(commandBuffer);
 }
 
-void vrglasses_for_robots::VulkanRenderer::createTextureImageView() {
-
-}
 
 VkImageView vrglasses_for_robots::VulkanRenderer::createImageView(
     VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
@@ -1112,9 +1107,6 @@ VkImageView vrglasses_for_robots::VulkanRenderer::createImageView(
   return imageView;
 }
 
-void vrglasses_for_robots::VulkanRenderer::createTextureSampler() {
-
-}
 
 VkCommandBuffer
 vrglasses_for_robots::VulkanRenderer::beginSingleTimeCommands() {
@@ -1452,13 +1444,8 @@ bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
 
   setupDescriptorPool();
   for (size_t idx = 0; idx < models_.size(); idx++) {
-    // loadTexture( models_[idx].texture_file);
-//    filename_texture_ = models_[idx].texture_file;
-//    std::cout << filename_texture_ << "!! " << std::endl;
     models_[idx].material_index = idx;
     createTextureImage(textures_[idx],models_[idx].texture_file);
-//    createTextureImageView();
-//    createTextureSampler();
     setupDescriptorSet(textures_[idx]);
   }
 

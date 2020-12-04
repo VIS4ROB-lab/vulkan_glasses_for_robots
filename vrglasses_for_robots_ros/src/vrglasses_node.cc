@@ -198,6 +198,7 @@ kindr::minimal::QuatTransformation VRGlassesNode::computeT_WC(const geometry_msg
     q_WS.y() = pose.orientation.y;
     q_WS.z() = pose.orientation.z;
     q_WS.w() = pose.orientation.w;
+    q_WS.normalize();
 
     kindr::minimal::QuatTransformation T_WC =
             kindr::minimal::QuatTransformation(p_WS, q_WS) * visim_project_.T_SC;
