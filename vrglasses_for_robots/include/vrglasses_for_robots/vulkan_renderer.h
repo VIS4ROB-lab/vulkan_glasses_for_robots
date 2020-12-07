@@ -266,7 +266,12 @@ public:
       float p_focal_u, float p_focal_v, float p_center_u, float p_center_v);
   void setCamera(glm::mat4 mvp);
 
+  //
   bool loadMeshs(const std::string &model_folder, const std::string &model_list);
+
+  bool loadMesh(const std::string &filename_model_obj, const std::string &filename_model_tex);
+
+  void noFileScene();
 
   bool loadScene(const std::string &scene_file);
 

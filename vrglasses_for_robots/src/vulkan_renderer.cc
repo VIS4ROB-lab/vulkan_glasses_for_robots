@@ -585,9 +585,6 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
 
 
     for (size_t idx = 0; idx < scene_items_.size(); idx++) {
-      // std::cout << models_[idx].begin_vertex_count << "count-index " <<
-      // models_[idx].begin_vertex_index << std::endl;
-
 
       glm::mat4 mvp_cv = vp_cv_ * scene_items_[idx].T_World2Model;
 
@@ -601,14 +598,6 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
       vkCmdDrawIndexed(commandBuffer, models_[model_idx].begin_vertex_count, 1,
                        models_[model_idx].begin_vertex_index, 0, 0);
     }
-
-    //     vp_cv_ = glm::translate( vp_cv_, glm::vec3(0,0,50) );
-    //    vkCmdPushConstants(commandBuffer, pipelineLayout,
-    //                       VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(vp_cv_),
-    //                       &vp_cv_);
-    //    vkCmdDrawIndexed(commandBuffer,
-    //                     indices_.size() - std::floor(indices_.size() / 2), 1,
-    //                     std::floor(indices_.size() / 2), 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
@@ -1386,6 +1375,34 @@ vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
   vkDestroyInstance(instance, nullptr);
 }
 
+bool vrglasses_for_robots::VulkanRenderer::loadMesh(
+    const std::string &filename_model_obj,
+    const std::string &filename_model_tex) {
+
+  assert(models_.size() == 0);
+  models_.push_back(ThreeDModel());
+  models_[0].name = "model_one";
+  models_[0].obj_file = filename_model_obj;
+  models_[0].texture_file = filename_model_tex;
+  models_index_["model_one"] = 0;
+
+  // load geometry
+  loadVertex(0);
+
+  // load textures
+  textures_.resize(1);
+
+  setupDescriptorPool();
+
+  models_[0].material_index = 0;
+  createTextureImage(textures_[0],models_[0].texture_file);
+  setupDescriptorSet(textures_[0]);
+
+  copyVertex();
+
+  return false;
+}
+
 bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
     const std::string &model_folder, const std::string &model_list) {
 
@@ -1434,7 +1451,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadMeshs(
   // load geometry
   for (size_t idx = 0; idx < models_.size(); idx++) {
     loadVertex(idx);
-    models_[idx].material_index = idx;
+    //models_[idx].material_index = idx;
   }
 
 
@@ -1607,3 +1624,13 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
   }
   return true;
 }
+void vrglasses_for_robots::VulkanRenderer::noFileScene() {
+
+  for (size_t idx = 0; idx < models_.size(); idx++) {
+    scene_items_.push_back(SceneItem());
+    scene_items_.back().model_name = models_[idx].name;
+    scene_items_.back().T_World2Model = glm::mat4(1.0);
+  }
+
+}
+

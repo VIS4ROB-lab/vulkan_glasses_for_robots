@@ -18,9 +18,9 @@
   		<param name="camera_frame_id" value="$(arg mav_name)/visensor/base_link" />
   		<param name="model_folder"   value="$(arg model_folder)" />
   		<param name="model_list_file"    value="$(arg model_list_file)" />
-  		<param name="model_pose_file"    value="$(arg model_pose_file)" />
+  		<param name="model_pose_file"    value="$(arg model_pose_file)" /><!-- the model_pose_file parameter is only necessary if you want multiple instances of the models in the model_list_file or if the models need a pose transformation (only position and yaw supported)-->
 	  	<param name="shader_folder"   value="$(find vrglasses_for_robots)/shaders" />
-		<param name="render_far"      value="400.0" /><!-- the range between near and far should be as small as possible, this affects the accuracy of the render depth map-->
+		<param name="render_far"      value="800.0" /><!-- the range between near and far should be as small as possible, this affects the accuracy of the render depth map-->
 		<param name="render_near"     value="0.1" />
   	</node>
 

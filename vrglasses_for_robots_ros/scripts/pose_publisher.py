@@ -10,14 +10,14 @@ def publisher():
     while not rospy.is_shutdown():
         p = Odometry()
         p.header.stamp = rospy.Time.now()
-        p.pose.pose.position.x = -60
-        p.pose.pose.position.y = -30
-        p.pose.pose.position.z = 30.0
+        p.pose.pose.position.x = -0
+        p.pose.pose.position.y = -60
+        p.pose.pose.position.z = 250.0
         # Make sure the quaternion is valid and normalized
         p.pose.pose.orientation.x = 0.0
-        p.pose.pose.orientation.y = 0.0
+        p.pose.pose.orientation.y = 0.707
         p.pose.pose.orientation.z = 0.0
-        p.pose.pose.orientation.w = 1.0
+        p.pose.pose.orientation.w = 0.707
         pub.publish(p)
         rate.sleep()
 
