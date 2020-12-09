@@ -34,5 +34,14 @@ $ cd ~/catkin_ws
 $ catkin build
 ```  
 
+## Running
+To be able to visualize some rendering is necessary to have a node publishing camera poses on the topic subscribed by the vrglasses_for_robots_ros node. The script vrglasses_for_robots_ros/scripts/pose_publisher.py is an example for a simple camera pose publisher.
+
+### Single model
+roslaunch vrglasses_for_robots_ros simple_example.launch file_obj:=/home/lucas/Downloads/textures/oakland_library_semantics/oakland-nj-public-library_v1.r2.obj file_texture:=/home/lucas/Downloads/textures/oakland_library_semantics/oakland_library_texture8k_roof_rgbs.tga
+
+### Multiple Models
+roslaunch vrglasses_for_robots_ros multiple_model_example.launch model_folder:=/home/lucas/Downloads/textures model_list_file:=/media/secssd/catkin_ws/src/vulkan_glasses_for_robots/vrglasses_for_robots_ros/models/example_model_def_list.txt  model_pose_file:=/media/secssd/catkin_ws/src/vulkan_glasses_for_robots/vrglasses_for_robots_ros/models/example_model_poses_list.txt
+
 
 
