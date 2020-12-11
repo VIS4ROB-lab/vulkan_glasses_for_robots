@@ -36,7 +36,6 @@ private:
     ros::Duration diff_frames_;
     ros::Time last_frame_time_;
 
-    std::string camera_frame_id_;
     bool stereo_;
     bool initialized_;
 
@@ -90,6 +89,7 @@ private:
         double f;
         float cx, cy;
         int w, h, sampling_factor, imu_image_delay;
+        double baseline;
         kindr::minimal::QuatTransformation T_SC_left;
         kindr::minimal::QuatTransformation T_SC_right;
         VisimProject() {
@@ -101,11 +101,13 @@ private:
             imu_image_delay = 1;  // nanosec
 
             sampling_factor = 10;
+
+            baseline = 0.11;
             Eigen::Matrix<double, 4, 4> t_sc_left;
-            t_sc_left << 0, 0, 1, 0.015, -1, 0, 0, 0.055, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            t_sc_left << 0, 0, 1, 0.015, -1, 0, 0, 0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
             T_SC_left = kindr::minimal::QuatTransformation(t_sc_left);
             Eigen::Matrix<double, 4, 4> t_sc_right;
-            t_sc_right << 0, 0, 1, 0.015, -1, 0, 0, -0.055, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            t_sc_right << 0, 0, 1, 0.015, -1, 0, 0, -0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
             T_SC_right = kindr::minimal::QuatTransformation(t_sc_right);
         }
         // todo load from json project

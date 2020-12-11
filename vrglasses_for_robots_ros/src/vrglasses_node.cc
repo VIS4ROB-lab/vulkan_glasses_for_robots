@@ -47,7 +47,7 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
 
     }else{
       if (!nh_private_.getParam("camera_frame_id", cam_info_l_.header.frame_id)) {
-        camera_frame_id_ = "world";
+        cam_info_l_.header.frame_id = "world";
         ROS_WARN("camera_frame_id parameter not found, using default('world')");
       }
     }
@@ -205,12 +205,12 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
 
         sensor_msgs::ImagePtr semantic_msg;
         semantic_msg = cv_bridge::CvImage(msg.header, "mono8", result_s_map_l_).toImageMsg();
-        semantic_msg->header.frame_id = camera_frame_id_;
+        semantic_msg->header.frame_id = cam_info_l_.header.frame_id;
         semantic_pub_.publish(semantic_msg);
 
         sensor_msgs::ImagePtr depth_msg;
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_l_).toImageMsg();
-        depth_msg->header.frame_id = camera_frame_id_;
+        depth_msg->header.frame_id = cam_info_l_.header.frame_id;
         depth_pub_.publish(depth_msg);
 
         //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_); //TODO add param to enable the point cloud publication
