@@ -180,7 +180,8 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         rgb_msg_l = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_l_).toImageMsg();
         rgb_msg_l->header.frame_id = cam_info_l_.header.frame_id;
         
-        cam_info_l_.header = msg.header;        
+        cam_info_l_.header.seq = msg.header.seq;
+        cam_info_l_.header.stamp = msg.header.stamp;
 
         cam_l_pub_.publish(*rgb_msg_l, cam_info_l_);
 
@@ -195,7 +196,8 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
           rgb_msg_r = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_r_).toImageMsg();
           rgb_msg_r->header.frame_id = cam_info_r_.header.frame_id;
 
-          cam_info_r_.header = msg.header;
+          cam_info_r_.header.seq = msg.header.seq;
+          cam_info_r_.header.stamp = msg.header.stamp;
 
           cam_r_pub_.publish(*rgb_msg_r, cam_info_r_);
         }
