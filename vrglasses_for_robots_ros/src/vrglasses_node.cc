@@ -173,16 +173,14 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         tf::poseKindrToMsg(T_WC_left,&(odom_msg.pose.pose));
         camera_odom_pub_.publish(odom_msg);
 
-        cv::Mat out_l[] = { result_rgb_map_l_,result_s_map_r_ };
+        cv::Mat out_l[] = { result_rgb_map_l_,result_s_map_l_ };
         int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
         cv::mixChannels(&result_rgbs_map_l_,1,out_l,2,from_to,4);
         sensor_msgs::ImagePtr rgb_msg_l, rgb_msg_r;
         rgb_msg_l = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_l_).toImageMsg();
         rgb_msg_l->header.frame_id = cam_info_l_.header.frame_id;
-
-        ros::Time now = ros::Time().now();
-        cam_info_l_.header.stamp = now;
-        rgb_msg_l->header.stamp = now;
+        
+        cam_info_l_.header = msg.header;        
 
         cam_l_pub_.publish(*rgb_msg_l, cam_info_l_);
 
@@ -197,8 +195,7 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
           rgb_msg_r = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_r_).toImageMsg();
           rgb_msg_r->header.frame_id = cam_info_r_.header.frame_id;
 
-          cam_info_r_.header.stamp = now;
-          rgb_msg_r->header.stamp = now;
+          cam_info_r_.header = msg.header;
 
           cam_r_pub_.publish(*rgb_msg_r, cam_info_r_);
         }
