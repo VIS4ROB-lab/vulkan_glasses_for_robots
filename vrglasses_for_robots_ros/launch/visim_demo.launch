@@ -12,6 +12,7 @@
 	  	
   		<param name="framerate"        value="20.0" />
   		<param name="camera_frame_id"  value="$(arg mav_name)/visensor/base_link" />
+		  <param name="stereo"		       value="false" />
 	  	<param name="mesh_obj_file"    value="/home/luca/dataset/vr_planner/inveraray_castle/inveraray.obj" />
   		<param name="texture_file"     value="/home/luca/dataset/vr_planner/inveraray_castle/inveraray.tga" />
 	  	<param name="shader_folder"    value="$(find vrglasses_for_robots)/shaders" />
