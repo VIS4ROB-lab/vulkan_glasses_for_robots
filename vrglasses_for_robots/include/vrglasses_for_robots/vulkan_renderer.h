@@ -278,6 +278,8 @@ public:
   void copyVertex();
 
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map);
+  
+  void clearModels() { models_.clear(); }
 
   ~VulkanRenderer();
 
