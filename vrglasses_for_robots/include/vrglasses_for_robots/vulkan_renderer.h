@@ -278,15 +278,10 @@ public:
   void copyVertex();
 
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map);
+
+  void cleanUp();
   
-  void clearModels() { 
-    // Clear Models and associated containers
-    models_.clear(); 
-    indices_.clear();
-    vertices_.clear();
-    // Clear texture
-    textures_.clear();
-  }
+  void clearModels();
 
   ~VulkanRenderer();
 

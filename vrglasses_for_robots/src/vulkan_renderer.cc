@@ -1325,8 +1325,7 @@ void vrglasses_for_robots::VulkanRenderer::renderMesh(
   // releaseMeshDataBuffers();
 }
 
-vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
-
+void vrglasses_for_robots::VulkanRenderer::cleanUp() {
   vkDestroyBuffer(device, vertexBuffer, nullptr);
   vkFreeMemory(device, vertexMemory, nullptr);
   vkDestroyBuffer(device, indexBuffer, nullptr);
@@ -1373,6 +1372,30 @@ vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
   }
 #endif
   vkDestroyInstance(instance, nullptr);
+}
+
+void vrglasses_for_robots::VulkanRenderer::clearModels() {
+  // Clear Models and associated containers
+  models_.clear();
+  indices_.clear();
+  vertices_.clear();
+  // Clear scene item
+  scene_items_.clear();
+  // Buffers / memory
+  if (!textures_.empty()) {
+    // Clean everything up
+    cleanUp();
+    // Restart
+    initVulkan(true);
+    buildRenderPass(width_, height_);
+    vkQueueWaitIdle(queue);
+  }
+  // Clear texture
+  textures_.clear();
+}
+
+vrglasses_for_robots::VulkanRenderer::~VulkanRenderer() {
+  cleanUp();
 }
 
 bool vrglasses_for_robots::VulkanRenderer::loadMesh(
