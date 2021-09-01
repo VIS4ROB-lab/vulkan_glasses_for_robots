@@ -93,9 +93,16 @@ private:
         kindr::minimal::QuatTransformation T_SC_left;
         kindr::minimal::QuatTransformation T_SC_right;
         VisimProject() {
-            f = 455;
-            cx = 376.5;
-            cy = 240.5;
+            f = 571.63;//3040.61969930976;
+	    cx = 366.23;
+	    cy = 243.592;
+            //cx = 1939.827304978;
+            //cy = 1512.6720918;
+            //w = 4000;
+            //h = 3000;
+	    //f = 455;
+            //cx = 376.5;
+            //cy = 240.5;
             w = 752;
             h = 480;
             imu_image_delay = 1;  // nanosec
@@ -104,10 +111,12 @@ private:
 
             baseline = 0.11;
             Eigen::Matrix<double, 4, 4> t_sc_left;
-            t_sc_left << 0, 0, 1, 0.015, -1, 0, 0, 0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            //t_sc_left << 0, 0, 1, 0.015, -1, 0, 0, 0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+	    t_sc_left << 1, 0, 0, 0,    0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 0, 1;
             T_SC_left = kindr::minimal::QuatTransformation(t_sc_left);
             Eigen::Matrix<double, 4, 4> t_sc_right;
-            t_sc_right << 0, 0, 1, 0.015, -1, 0, 0, -0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            //t_sc_right << 0, 0, 1, 0.015, -1, 0, 0, -0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            t_sc_right << 1, 0, 0, 0,    0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 0, 1;
             T_SC_right = kindr::minimal::QuatTransformation(t_sc_right);
         }
         // todo load from json project

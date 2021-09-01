@@ -1,113 +1,5 @@
 #!/usr/bin/env python
 
-# import rospy
-#
-# from nav_msgs.msg import Path
-# from nav_msgs.msg import Odometry
-# from geometry_msgs.msg import PoseStamped
-#
-# class Parameter:
-#     def __init__(self):
-#         self.f = 0
-#         self.cx = 0
-#         self.cy = 0
-#         self.w = 0
-#         self.h = 0
-#         self.base = ''
-#         self.start = 0
-#         self.end = 0
-#         self.reductor = 4
-#         self.output_folder = ''
-#         self.proj_name = ''
-#
-# path = Path()
-#
-# def load_traj():
-#     global path
-#     path.header.stamp = rospy.Time.now()
-#     path.header.frame_id = 'world'
-#
-#
-#
-# def build_path():
-#     global path
-#     path.header.stamp = rospy.Time.now()
-#     path.header.frame_id = 'world'
-#     pose = PoseStamped()
-#     pose.header.stamp = rospy.Time.now()
-#     pose.header.frame_id = 'world'
-#
-#     pose.pose.position.x = -57.825359000009485
-#     pose.pose.position.y = -23.033219000324607
-#     pose.pose.position.z = -25.206523000000004
-#     pose.pose.orientation.w = 0.738613
-#     pose.pose.orientation.x = 0.00291168
-#     pose.pose.orientation.y = -0.658953
-#     pose.pose.orientation.z = 0.142212
-#     path.poses.append(pose)
-#
-#
-# def publisher():
-#     global path
-#     pub = rospy.Publisher('/firefly/vi_sensor/ground_truth/odometry', Odometry, queue_size=1)
-#     path_pub = rospy.Publisher('/path', Path, queue_size=10)
-#
-#     rospy.init_node('pose_publisher', anonymous=True)
-#     build_path()
-#     rate = rospy.Rate(1) # Hz
-#     while not rospy.is_shutdown():
-#         p = Odometry()
-#         p.header.stamp = rospy.Time.now()
-#         p.pose.pose.position.x = -57.825359000009485
-#         p.pose.pose.position.y = -23.033219000324607
-#         p.pose.pose.position.z = -25.206523000000004
-#         # Make sure the quaternion is valid and normalized
-#
-#         p.pose.pose.orientation.w = 0.738613
-#         p.pose.pose.orientation.x = 0.00291168
-#         p.pose.pose.orientation.y = -0.658953
-#         p.pose.pose.orientation.z = 0.142212
-#
-#
-# #        pub.publish(p)
-#         path_pub.publish(path)
-#         rate.sleep()
-#
-# #
-# # if __name__ == '__main__':
-# #     try:
-# #
-# #         publisher()
-# #     except rospy.ROSInterruptException:
-# #         pass
-# #
-#
-# if __name__ == '__main__':
-#
-#
-#     params = Parameter()
-#     params.w = 4000
-#     params.h = 3000
-#     params.f = 3040.61969930976147225010
-#     params.cx = 1939.82730497851412110322
-#     params.cy = 1512.67209180559916603670
-#     params.reductor = 1.0
-#     params.output_folder = '/home/lucas/temp/pix4d_temp_test'
-#     params.input_folder = '/media/secssd/dataset/amazon_models/arche2021'
-#     params.proj_name = 'arche21_warehouse_only_circles'
-#
-#     print('\n\n asd \n\n')
-#
-#     proj = Pix4DProj(params)
-#     proj.process()
-#
-#     try:
-#
-#         publisher()
-#     except rospy.ROSInterruptException:
-#         pass
-#
-
 from tokenize import PlainToken
 from matplotlib.pyplot import subplot
 from numpy.core.defchararray import split
@@ -126,6 +18,16 @@ from os import path
 import csv
 from math import cos, sin
 import math
+import cv2
+
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+
+
+file_extern_cam = '/media/secssd/dataset/amazon_models/irchel140821/pix4d_params/irchel140821-merged_calibrated_external_camera_parameters.txt'
+folder_undistorted = '/media/secssd/dataset/amazon_models/irchel140821/undistorted_images'
+file_intern_cam = ''
+
 
 
 def angle_to_rotmat( omega, phi, kappa):
@@ -174,14 +76,17 @@ def angle_to_rotmat1( omega, phi, kappa):
     return R
 
 def load_pix4d():
-    offsetx, offsety, offsetz = 400302.000, 5232070.000, 466.000
+    #offsetx, offsety, offsetz = 400302.000, 5232070.000, 466.000
+    offsetx, offsety, offsetz = 2683905.000, 1249997.000, 457.000
     points = []
     orientations = []
-    with open('/media/lucas/Windows/Users/v4rl-win10/Documents/pix4d/arche21_warehouse_only_circles/1_initial/params/arche21_warehouse_only_circles_calibrated_external_camera_parameters.txt', mode='r') as csv_file:
+    filenames = []
+    with open(file_extern_cam, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=' ')
         for row in csv_reader:
             # cam = CameraPose(row)
             # self.cameras[cam.img_name] = cam
+            filenames.append(row['imageName'])
             points.append((float(row['X'])-offsetx, float(row['Y'])-offsety, float(row['Z'])-offsetz))
             rotmat = angle_to_rotmat1(math.radians(float(row['Omega'])),
                                       math.radians(float(row['Phi'])),
@@ -190,7 +95,7 @@ def load_pix4d():
             orientations.append((quat[0], quat[1], quat[2], quat[3]))  # w, x, y, z
             # orientations.append((cam.x, cam.y, cam.z))
 
-    return points, orientations
+    return points, orientations, filenames
 
 def single_sample(num, x=0, y=0, height=100, yaw=90):
     points = []
@@ -200,7 +105,6 @@ def single_sample(num, x=0, y=0, height=100, yaw=90):
         points.append((x, y, height))
         yaws.append(yaw)
     return points, yaws
-
 
 def star_positions_old(center_x=0.0, center_y=0.0, min_radius=10, max_radius=120, height=50.0):
     points = []
@@ -262,15 +166,29 @@ def compute_star_orientations(points, yaw_angles, pitch):
     return orientations
 
 
-def publisher(points, orientations, rate=100):
+def publisher( points, orientations,filenames, rate=100):
     pub = rospy.Publisher('firefly/vi_sensor/ground_truth/odometry', Odometry, queue_size=1)  # pose_publisher/odometry
+    image_pub = rospy.Publisher("/firefly/real_image", Image, queue_size=10)
+    bridge = CvBridge()
     rospy.init_node('pose_publisher', anonymous=True)
     rate = rospy.Rate(rate)  # Hz
+
+    original_w = 4000
+    original_h = 3000
+    end_w = 752
+    end_h = 480
+
+    scaling_factor = float(end_w) / original_w
+    temp_h = original_h * scaling_factor
+    half_offset = math.floor((temp_h - end_h) / 2)
+    print(scaling_factor, half_offset)
+
+
 
     file_dir = '/home/lucas/Downloads/random_poses.txt'
     with open(file_dir, 'w') as f:
         print('Number of Points: {}'.format(len(points)))
-        for i in tqdm(range(1, len(points))):
+        for i in tqdm(range(0, 270)):#len(points))):
             p = Odometry()
             p.header.stamp = rospy.Time.now()
             p.header.frame_id = 'world'
@@ -282,10 +200,24 @@ def publisher(points, orientations, rate=100):
             p.pose.pose.orientation.y = orientations[i][2]
             p.pose.pose.orientation.z = orientations[i][3]
             p.pose.pose.orientation.w = orientations[i][0]
+            f.write(filenames[i]+' '+ str(p.header.stamp.to_nsec()) +' ')
             np.savetxt(f, [points[i][0], points[i][1], points[i][2], orientations[i][0], orientations[i][1],
                            orientations[i][2], orientations[i][3]], fmt='%f', newline=' ', delimiter=',')  # w, x, y, z
             f.write("\n")
-            pub.publish(p)
+
+            cv_image = cv2.imread(folder_undistorted + '/' + filenames[i])
+            newimage = cv2.resize(cv_image, None, fx=scaling_factor, fy=scaling_factor)
+            crop_img = newimage[int(half_offset):int(half_offset + end_h), int(0):int(0 + end_w)]
+
+
+            try:
+                pub.publish(p)
+                img_msg = bridge.cv2_to_imgmsg(crop_img, "bgr8")
+                img_msg.header.stamp = p.header.stamp
+                image_pub.publish(img_msg)
+            except CvBridgeError as e:
+                print(e)
+
             if rospy.is_shutdown():
                 break
             rate.sleep()
@@ -330,41 +262,26 @@ def plot_position(points_array, yaws_array, x_min=-95, x_max=175, y_min=-120, y_
 
 if __name__ == '__main__':
     print("circ!")
-    sampling_rate = 2
-    if sys.argv[0] >= 3:
-        sampling_rate = 2 #int(sys.argv[3])
+    sampling_rate = 10
+    if len(sys.argv) >= 3:
+        sampling_rate = 10 #int(sys.argv[3])
 
     height = 20 # int(sys.argv[1])
     pitch = 15 #int(sys.argv[2])
 
     points = []
     orientations = []
+    filenames = []
 
     num_fixed = 100
-    # points_fixed, yaw_angles_fixed = single_sample(num=num_fixed)
-    # orientations_fixed = compute_star_orientations(points=points_fixed, yaw_angles=yaw_angles_fixed, pitch=-90)
-    #
-    # points.extend(points_fixed)
-    # orientations.extend(orientations_fixed)
-    # print(len(points))
 
-    # print('Samping on fixed pisition: {}'.format(num_fixed))
-    #
-    points_pix4d, orientation_pix4d = load_pix4d()
+    points_pix4d, orientation_pix4d, filename_pix4d = load_pix4d()
     points.extend(points_pix4d)
     orientations.extend(orientation_pix4d)
-
-    points_star, yaw_angles_star = star_positions(min_radius=10, max_radius=80, height=height, radius_step=70)
-    orientations_star = compute_star_orientations(points_star, yaw_angles_star, pitch)
-    num_star = len(points_star)
-
-    print('Sampling total on Star: {}'.format(num_star))
-
-    # points.extend(points_star)
-    # orientations.extend(orientations_star)
+    filenames.extend(filename_pix4d)
 
     try:
-        publisher(points, orientations, sampling_rate)
+        publisher(points, orientations, filenames, sampling_rate)
     except rospy.ROSInterruptException:
         pass
 
