@@ -43,6 +43,21 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
       camera_frame_id_ = "world";
       ROS_WARN("camera_frame_id parameter not found, using default('world')");
     }
+    
+    // Extrinsics transformation
+    Eigen::Quaterniond q_BC;
+    q_BC.x() = nh_private_.param("q_BC_x", 0.0);
+    q_BC.y() = nh_private_.param("q_BC_y", 0.0);
+    q_BC.z() = nh_private_.param("q_BC_z", 0.0);
+    q_BC.w() = nh_private_.param("q_BC_w", 1.0);
+    q_BC.normalize();
+    
+    Eigen::Vector3d v_BC;
+    v_BC.x() = nh_private_.param("v_BC_x", 0.0);
+    v_BC.y() = nh_private_.param("v_BC_y", 0.0);
+    v_BC.z() = nh_private_.param("v_BC_z", 0.0);
+    
+    T_BC_ = kindr::minimal::QuatTransformation(v_BC, q_BC);
 
     // Initialization is fine
     initialized_ = true;
@@ -212,7 +227,7 @@ kindr::minimal::QuatTransformation VRGlassesNode::computeT_WC(const geometry_msg
     q_WS.normalize();
 
     kindr::minimal::QuatTransformation T_WC =
-            kindr::minimal::QuatTransformation(p_WS, q_WS) * visim_project_.T_SC;
+            kindr::minimal::QuatTransformation(p_WS, q_WS) * T_BC_ * visim_project_.T_SC;
 
     return T_WC;
 }

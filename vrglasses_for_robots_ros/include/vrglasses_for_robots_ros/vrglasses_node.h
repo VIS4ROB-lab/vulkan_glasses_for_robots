@@ -102,7 +102,9 @@ private:
     };
 
     VisimProject visim_project_;
-
+    
+    // This transformation is from body to camera mount
+    kindr::minimal::QuatTransformation T_BC_;
 
 };
 
