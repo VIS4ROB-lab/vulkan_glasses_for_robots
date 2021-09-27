@@ -232,6 +232,7 @@ glm::mat4 VRGlassesNode::computeMVP(const kindr::minimal::QuatTransformation &T_
             T_CW_cv_glm[j][i] = T_CW_cv_eigen(i, j);
         }
     }
+    
     return perpective_ * conversion_gl_cv * T_CW_cv_glm; //mvp_fix;//
 }
 
@@ -271,6 +272,7 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
     // except an additional row is inserted to map the z-coordinate to OpenGL.
     // CMatrix4<T> matProjection(0);    // the 3rd column is inverted to make the
     // camera look towards +Z (instead of -Z in opengl)
+    
     matProjection = glm::mat4(0);
     matProjection[0][0] = alpha;
     matProjection[1][0] = skew;
@@ -281,6 +283,82 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
     matProjection[3][2] = n * f;
     matProjection[2][3] = -1.0;
 
+    // float aspect = 0;
+    // aspect = r/t;
+    // float fovy = glm::radians(50.f);
+    // const float tanHalfFovy = (fovy / 2.f);
+    // matProjection = glm::mat4{0.0f};
+    // matProjection[0][0] = 1.f / (aspect * tanHalfFovy);
+    // matProjection[1][1] = 1.f / (tanHalfFovy);
+    // matProjection[2][2] = f / (f - n);
+    // matProjection[2][3] = 1.f;
+    // matProjection[3][2] = -(f * n) / (f - n);
+
+
+   glm::mat4 ortho;
+   ortho = glm::ortho(l,r,b,t,n,f);
+  
+    //matProjection = glm::mat4(0);
+
+    //glm::mat4 ortho = glm::ortho(0.0f, 752.0f, 0.0f, 480.0f, 0.1f, 500.0f);
+    /*
+    Matrix4x4 PrepareOrthographicProjectionMatrix( float left_plane,
+                                                 float right_plane,
+                                                 float bottom_plane,
+                                                 float top_plane,
+                                                 float near_plane,
+                                                 float far_plane ) {
+    Matrix4x4 orthographic_projection_matrix = {
+      2.0f / (right_plane - left_plane),
+      0.0f,
+      0.0f,
+      0.0f,
+
+      0.0f,
+      2.0f / (bottom_plane - top_plane),
+      0.0f,
+      0.0f,
+
+      0.0f,
+      0.0f,
+      1.0f / (near_plane - far_plane),
+      0.0f,
+
+      -(right_plane + left_plane) / (right_plane - left_plane),
+      -(bottom_plane + top_plane) / (bottom_plane - top_plane),
+      near_plane / (near_plane - far_plane),
+      1.0f
+    };
+    return orthographic_projection_matrix;
+    */
+
+   // create orthographic projection matrix
+  /*
+   float oleft = 0.0 ;
+   float oright = 752.0;
+   float otop = 480.0;
+   float obottom = 0.0;
+   float onear = 0.1;
+   float ofar = 500.0;
+
+   glm::mat4 orthoProjection;
+   orthoProjection = glm::mat4{1.0f};
+
+   orthoProjection[0][0] = 2.f / (oright - oleft);
+   orthoProjection[1][1] = 2.f / (obottom - otop);
+   orthoProjection[2][2] = 1.f / (ofar - onear);
+   orthoProjection[3][0] = -(oright + oleft) / (oright - oleft);
+   orthoProjection[3][1] = -(obottom + otop) / (obottom - otop);
+   orthoProjection[3][2] = -onear / (ofar - onear);
+
+
+       matProjection = orthoProjection;
+  */
+    //ortho[0][2] *= -1;
+    //ortho[1][2] *= -1;
+    //ortho[2][2] *= -1;
+    //ortho[3][2] *= -1;
+    
     //    matCVProjection = glm::mat4(0);
     //    matCVProjection[0][0] = alpha;
     //    matCVProjection[1][0] = skew;
@@ -295,6 +373,7 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
     // resulting OpenGL frustum is the product of the orthographic
     // mapping to normalized device coordinates and the augmented camera intrinsic
     // matrix
-    matPerspective = ndc * matProjection;
-    matPerspective[1][1] *= -1; //was originally designed for OpenGL, where the Y coordinate of the clip coordinates is inverted in relation Vulkan.
+    matPerspective = ortho;
+    matPerspective[0][0] *= 2;
+    matPerspective[1][1] *= -2; //was originally designed for OpenGL, where the Y coordinate of the clip coordinates is inverted in relation Vulkan.
 }
