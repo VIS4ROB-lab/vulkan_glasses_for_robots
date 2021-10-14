@@ -1,0 +1,13 @@
+name: buffalo_construction_site
+geometry_dimensions:
+  h_min: 10
+  h_max: 80
+  x_min: -90
+  x_max: 90
+  y_min: -80
+  y_max: 90
+fibonacci_radius_list: [20, 40, 60, 80, 100]
+dense_factor: 16
+star_sampling:
+  min_radius: 10
+  max_radius: 81

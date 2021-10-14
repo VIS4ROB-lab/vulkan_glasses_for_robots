@@ -1,0 +1,13 @@
+name: hofdi_house
+geometry_dimensions:
+  h_min: 10
+  h_max: 120
+  x_min: -105
+  x_max: 120
+  y_min: -110
+  y_max: 105
+fibonacci_radius_list: [20, 40, 60, 80, 100]
+dense_factor: 16
+star_sampling:
+  min_radius: 10
+  max_radius: 81

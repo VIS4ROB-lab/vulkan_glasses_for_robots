@@ -1,0 +1,15 @@
+name: baxall
+geometry_dimensions:
+  h_min: 1
+  h_max: 120
+  x_min: -120
+  x_max: 90
+  y_min: -70
+  y_max: 90
+fibonacci_radius_list: [20, 40, 60, 80]
+dense_factor: 16
+star_sampling:
+  min_radius: 10
+  max_radius: 91
+
+    # baxall dimensions: h_main = 1, h_max = 120, x_min = -120, x_max = 90, y_min = -70, y_max = 90

@@ -1,0 +1,15 @@
+name: fraser_gunny_range
+geometry_dimensions:
+  h_min: 10
+  h_max: 180
+  x_min: -200
+  x_max: 200
+  y_min: -80
+  y_max: 80
+fibonacci_radius_list: [40, 60, 80, 100, 120, 140, 160, 180, 200]
+dense_factor: 64
+star_sampling:
+  min_radius: 10
+  max_radius: 91
+
+# gragen of eden dimensions: h_min = 10, h_max = 120, x_min = -90, x_max = 90, y_min = -80, y_max = 80

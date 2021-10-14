@@ -8,7 +8,7 @@
   <group ns="$(arg mav_name)">
 
 	  <node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
-	  	<remap from="odometry"         to="/pose_publisher/odometry" />
+	  	<remap from="odometry"         to="vi_sensor/ground_truth/odometry" />
 	  	
   		<param name="framerate"        value="20.0" />
   		<param name="camera_frame_id"  value="$(arg mav_name)/visensor/base_link" />

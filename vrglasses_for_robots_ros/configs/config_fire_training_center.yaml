@@ -1,0 +1,13 @@
+name: fire_training_center
+geometry_dimensions:
+  h_min: 5
+  h_max: 80
+  x_min: -70
+  x_max: 70
+  y_min: -50
+  y_max: 60
+fibonacci_radius_list: [20, 40, 60, 80]
+dense_factor: 16
+star_sampling:
+  min_radius: 10
+  max_radius: 81

@@ -36,7 +36,7 @@ private:
     ros::Duration diff_frames_;
     ros::Time last_frame_time_;
 
-    std::string camera_frame_id_;
+    bool stereo_;
     bool initialized_;
 
     // ros
@@ -45,7 +45,9 @@ private:
     ::ros::Subscriber odom_sub_; //usually imu (sensor S) pose of visim (T_WS)
     ::ros::Publisher  camera_odom_pub_; // camera in the model world frame (T_WC)
 
-    image_transport::Publisher color_pub_;
+    image_transport::CameraPublisher cam_l_pub_;    // primary publisher
+    image_transport::CameraPublisher cam_r_pub_;    // only used for stereo
+
     //image_transport::ImageTransport rgb_imt_;
     ros::Publisher dense_pointcloud_pub_;
 
@@ -56,11 +58,13 @@ private:
     //image_transport::ImageTransport depth_imt_;
     image_transport::ImageTransport image_transport_;
 
-
+    sensor_msgs::CameraInfo cam_info_l_;
+    sensor_msgs::CameraInfo cam_info_r_;
 
     glm::mat4 computeMVP(const kindr::minimal::QuatTransformation &pose);
 
-    kindr::minimal::QuatTransformation computeT_WC(const geometry_msgs::Pose &pose);
+    kindr::minimal::QuatTransformation computeT_WC_left(const geometry_msgs::Pose &pose);
+    kindr::minimal::QuatTransformation computeT_WC_right(const geometry_msgs::Pose &pose);
 
     void odomCallback(const nav_msgs::Odometry &msg);
 
@@ -71,7 +75,8 @@ private:
     glm::mat4 perpective_;
     double near_ = 0.1, far_ = 500.0;
 
-    cv::Mat result_depth_map_, result_rgbs_map_,result_rgb_map_,result_s_map_;
+    cv::Mat result_depth_map_l_, result_rgbs_map_l_,result_rgb_map_l_,result_s_map_l_;
+    cv::Mat result_depth_map_r_, result_rgbs_map_r_,result_rgb_map_r_,result_s_map_r_;
 
     void buildOpenglProjectionFromIntrinsics(
             glm::mat4& matPerspective, glm::mat4& matProjection,
@@ -84,30 +89,35 @@ private:
         double f;
         float cx, cy;
         int w, h, sampling_factor, imu_image_delay;
-        kindr::minimal::QuatTransformation T_SC;
+        double baseline;
+        kindr::minimal::QuatTransformation T_SC_left;
+        kindr::minimal::QuatTransformation T_SC_right;
         VisimProject() {
-       Eigen::Matrix<double, 4, 4> t_sc;
-
-#if 1
-            f = 571.63;
-            cx = 366.23;
-            cy = 243.592;
+            f = 571.63;//3040.61969930976;
+	    cx = 366.23;
+	    cy = 243.592;
+            //cx = 1939.827304978;
+            //cy = 1512.6720918;
+            //w = 4000;
+            //h = 3000;
+	    //f = 455;
+            //cx = 376.5;
+            //cy = 240.5;
             w = 752;
             h = 480;
-            t_sc << 1, 0, 0, 0,    0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 0, 1;
-#else //default
-            f = 455;
-            cx = 376.5;
-            cy = 240.5;
-            w = 752;
-            h = 480;
-            t_sc << 0, 0, 1, 0.015, -1, 0, 0, 0.055, 0, -1, 0, 0.0065, 0, 0, 0, 1;
-#endif
             imu_image_delay = 1;  // nanosec
 
             sampling_factor = 10;
-     
-            T_SC = kindr::minimal::QuatTransformation(t_sc);
+
+            baseline = 0.11;
+            Eigen::Matrix<double, 4, 4> t_sc_left;
+            //t_sc_left << 0, 0, 1, 0.015, -1, 0, 0, 0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+	    t_sc_left << 1, 0, 0, 0,    0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 0, 1;
+            T_SC_left = kindr::minimal::QuatTransformation(t_sc_left);
+            Eigen::Matrix<double, 4, 4> t_sc_right;
+            //t_sc_right << 0, 0, 1, 0.015, -1, 0, 0, -0.5*baseline, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            t_sc_right << 1, 0, 0, 0,    0, 1, 0, 0,   0, 0, 1, 0,   0, 0, 0, 1;
+            T_SC_right = kindr::minimal::QuatTransformation(t_sc_right);
         }
         // todo load from json project
     };

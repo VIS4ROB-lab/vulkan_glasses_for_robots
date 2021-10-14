@@ -1,0 +1,15 @@
+name: heritage_library
+geometry_dimensions:
+  h_min: 10
+  h_max: 30
+  x_min: -30 
+  x_max: 30
+  y_min: -30
+  y_max: 30
+fibonacci_radius_list: [10, 20, 30]
+dense_factor: 16
+star_sampling:
+  min_radius: 10
+  max_radius: 91
+
+# gragen of eden dimensions: h_min = 10, h_max = 120, x_min = -90, x_max = 90, y_min = -80, y_max = 80

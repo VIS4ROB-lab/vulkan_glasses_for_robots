@@ -1,0 +1,13 @@
+name: essex_castle
+geometry_dimensions:
+  h_min: 10
+  h_max: 120
+  x_min: -70
+  x_max: 90
+  y_min: -70
+  y_max: 80
+fibonacci_radius_list: [20, 40, 60, 80, 100, 120]
+dense_factor: 16
+star_sampling:
+  min_radius: 10
+  max_radius: 81
