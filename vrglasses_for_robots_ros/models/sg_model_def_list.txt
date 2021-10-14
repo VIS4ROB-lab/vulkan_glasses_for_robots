@@ -1,0 +1,4 @@
+map;house_garden/house_garden_house_garden.obj;house_garden/house_garden.png
+person;person/source/model_05_color.obj;person/textures/model-textureuv.png
+
+
