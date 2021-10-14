@@ -7,6 +7,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/PointCloud.h>
 #include <minkindr_conversions/kindr_msg.h>
+#include <std_msgs/Float32.h>
 
 
 
@@ -16,6 +17,9 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     image_transport_(nh_private_), initialized_(false) {
     renderer_ = nullptr;
     odom_sub_ = nh_.subscribe("odometry", 500, &VRGlassesNode::odomCallback, this);
+ 
+    clip_r_sub_ = nh_.subscribe("clipParamR",500,clipRCallback(const std_msgs::Float32,this);
+
 
     depth_pub_ = image_transport_.advertise("depth_map", 1);
     color_pub_ = image_transport_.advertise("color_map", 1);
@@ -27,6 +31,7 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     //        nh_private_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5); //TODO add param to enable the point cloud publication
 
 
+    // result_rgb_map_.create(140,160,CV_8UC3);
     result_rgb_map_.create(visim_project_.h,visim_project_.w,CV_8UC3);
     result_s_map_.create(visim_project_.h,visim_project_.w,CV_8UC1);
 
@@ -62,9 +67,10 @@ void VRGlassesNode::run()
     nh_private_.param("render_far",far_,far_);    
     
     nh_private_.param("render_near",near_,near_);    
-
     renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
-          visim_project_.h, near_, far_, shader_folder);
+        visim_project_.h, near_, far_, shader_folder);
+    // renderer_ = new vrglasses_for_robots::VulkanRenderer(160, 
+    //       , near_, far_, shader_folder);
     glm::mat4 empty;
     buildOpenglProjectionFromIntrinsics(perpective_, empty, 
             visim_project_.w, visim_project_.h, visim_project_.f,
@@ -115,6 +121,15 @@ VRGlassesNode::~VRGlassesNode(){
     {
         delete renderer_;
     }
+}
+float clipRCallback(const std_msgs::Float32 msg)
+
+{
+
+  float R = msg;
+
+  return R;
+
 }
 
 void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
@@ -249,6 +264,14 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
     float n = near;
     float f = far;
 
+
+    //// TESTING ////
+
+    r = R ; //163.28
+    t = 160 ; //142.85
+  
+
+
     //  // set the viewport parameters
     //  viewport[0] = l;
     //  viewport[1] = b;
@@ -374,6 +397,6 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
     // mapping to normalized device coordinates and the augmented camera intrinsic
     // matrix
     matPerspective = ortho;
-    matPerspective[0][0] *= 2;
-    matPerspective[1][1] *= -2; //was originally designed for OpenGL, where the Y coordinate of the clip coordinates is inverted in relation Vulkan.
+    matPerspective[0][0] *= 1;
+    matPerspective[1][1] *= -1; //was originally designed for OpenGL, where the Y coordinate of the clip coordinates is inverted in relation Vulkan.
 }
