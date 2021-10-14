@@ -15,6 +15,7 @@
 #include <image_transport/image_transport.h>
 #include <kindr/minimal/quat-transformation.h>
 #include <opencv2/core.hpp>
+#include <std_msgs/Float32.h>
 
 namespace  vrglasses_for_robots{
 class VulkanRenderer;
@@ -45,6 +46,9 @@ private:
     ::ros::Subscriber odom_sub_; //usually imu (sensor S) pose of visim (T_WS)
     ::ros::Publisher  camera_odom_pub_; // camera in the model world frame (T_WC)
 
+    ::ros::Subscriber clip_t_sub_; //subscriber to clipping parameter t
+    ::ros::Subscriber clip_r_sub_; //subscriber to clipping parameter r
+
     image_transport::Publisher color_pub_;
     //image_transport::ImageTransport rgb_imt_;
     ros::Publisher dense_pointcloud_pub_;
@@ -63,6 +67,8 @@ private:
     kindr::minimal::QuatTransformation computeT_WC(const geometry_msgs::Pose &pose);
 
     void odomCallback(const nav_msgs::Odometry &msg);
+
+    float clipRCallback(const std_msgs::Float32 msg);
 
     void publishDenseSemanticCloud(const std_msgs::Header header, const sensor_msgs::ImagePtr &depth_map, const cv::Mat& semantic_map);
 
@@ -86,11 +92,11 @@ private:
         int w, h, sampling_factor, imu_image_delay;
         kindr::minimal::QuatTransformation T_SC;
         VisimProject() {
-            f = 455;
-            cx = 376.5;
-            cy = 240.5;
-            w = 752;
-            h = 480;
+            f = 200; //455
+            cx = 376.5; //376.5
+            cy = 240.5; //240.5
+            w = 560; //752
+            h = 640;//480
             imu_image_delay = 1;  // nanosec
 
             sampling_factor = 10;
