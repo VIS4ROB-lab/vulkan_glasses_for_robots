@@ -7,6 +7,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/PointCloud.h>
 #include <minkindr_conversions/kindr_msg.h>
+#include <glm/gtx/string_cast.hpp>
 
 
 
@@ -16,12 +17,19 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     image_transport_(nh_private_), initialized_(false) {
     renderer_ = nullptr;
     odom_sub_ = nh_.subscribe("odometry", 500, &VRGlassesNode::odomCallback, this);
+    ortho_sub_ = nh_.subscribe("ortho_config", 500, &VRGlassesNode::orthoImgCallback, this);
+    odom_ortho_sub_ = nh_.subscribe("odometry_ortho", 500, &VRGlassesNode::odomOrthoCallback, this);
 
     depth_pub_ = image_transport_.advertise("depth_map", 1);
     color_pub_ = image_transport_.advertise("color_map", 1);
     semantic_pub_ = image_transport_.advertise("semantic_map", 1);
 
     camera_odom_pub_ = nh_private_.advertise<nav_msgs::Odometry>("camera_odometry_out", 50);
+
+    depth_ortho_pub_ = image_transport_.advertise("ortho_depth_map", 1);
+    color_ortho_pub_ = image_transport_.advertise("ortho_color_map", 1);
+    semantic_ortho_pub_ = image_transport_.advertise("ortho_semantic_map", 1);
+    camera_odom_ortho_pub_ = nh_private_.advertise<nav_msgs::Odometry>("ortho_camera_odometry_out", 50);
 
     //dense_pointcloud_pub_ =
     //        nh_private_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5); //TODO add param to enable the point cloud publication
@@ -123,7 +131,7 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
     {
         last_frame_time_ = msg.header.stamp;
         kindr::minimal::QuatTransformation T_WC = computeT_WC(msg.pose.pose);
-        glm::mat4 mvp = computeMVP(T_WC);
+        glm::mat4 mvp = computeMVP(T_WC, perpective_);
         renderer_->setCamera(mvp);
         renderer_->renderMesh(result_depth_map_, result_rgbs_map_);
 
@@ -151,6 +159,57 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
 
         //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_); //TODO add param to enable the point cloud publication
     }
+}
+
+void VRGlassesNode::orthoImgCallback(const std_msgs::Float32MultiArray &msg)
+{
+    std::cout << "Ortho Img Callback" << std::endl;
+    float left   = msg.data[0];
+    float right  = msg.data[1];
+    float bottom = msg.data[2];
+    float top    = msg.data[3];
+    float near   = near_ ;
+    float far    = far_;
+
+    glm::mat4 ortho;
+    ortho = glm::ortho(left, right, bottom, top, near, far);
+
+    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
+                         0.0f, -1.0f, 0.0f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 1.0f);
+
+    orthographic_projection_matrix_ = clip * ortho;
+}
+
+void VRGlassesNode::odomOrthoCallback(const nav_msgs::Odometry &msg)
+{
+    kindr::minimal::QuatTransformation T_WC = computeT_WC(msg.pose.pose);
+    glm::mat4 mvp = computeMVP(T_WC, orthographic_projection_matrix_);
+    renderer_->setCamera(mvp);
+    renderer_->renderMesh(result_depth_map_, result_rgbs_map_);
+
+    nav_msgs::Odometry odom_msg = msg;
+    tf::poseKindrToMsg(T_WC,&(odom_msg.pose.pose));
+    camera_odom_ortho_pub_.publish(odom_msg);
+
+    cv::Mat out[] = { result_rgb_map_,result_s_map_ };
+    int from_to[] = { 0,2, 1,1, 2,0, 3,3 };
+    cv::mixChannels(&result_rgbs_map_,1,out,2,from_to,4);
+    sensor_msgs::ImagePtr rgb_msg;
+    rgb_msg = cv_bridge::CvImage(msg.header, "rgb8", result_rgb_map_).toImageMsg();
+    rgb_msg->header.frame_id = camera_frame_id_;
+    color_ortho_pub_.publish(rgb_msg);
+
+    sensor_msgs::ImagePtr semantic_msg;
+    semantic_msg = cv_bridge::CvImage(msg.header, "mono8", result_s_map_).toImageMsg();
+    semantic_msg->header.frame_id = camera_frame_id_;
+    semantic_ortho_pub_.publish(semantic_msg);
+
+    sensor_msgs::ImagePtr depth_msg;
+    depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
+    depth_msg->header.frame_id = camera_frame_id_;
+    depth_ortho_pub_.publish(depth_msg);
 }
 
 void VRGlassesNode::publishDenseSemanticCloud(const ::std_msgs::Header header, const sensor_msgs::ImagePtr &depth_map, const cv::Mat &semantic_map)
@@ -218,7 +277,7 @@ kindr::minimal::QuatTransformation VRGlassesNode::computeT_WC(const geometry_msg
 }
 
 
-glm::mat4 VRGlassesNode::computeMVP(const kindr::minimal::QuatTransformation &T_WC)
+glm::mat4 VRGlassesNode::computeMVP(const kindr::minimal::QuatTransformation &T_WC, glm::mat4 &projection)
 {
     kindr::minimal::QuatTransformation T_CW_cv = T_WC.inverse();
     auto T_CW_cv_eigen = T_CW_cv.getTransformationMatrix();
@@ -232,7 +291,7 @@ glm::mat4 VRGlassesNode::computeMVP(const kindr::minimal::QuatTransformation &T_
             T_CW_cv_glm[j][i] = T_CW_cv_eigen(i, j);
         }
     }
-    return perpective_ * conversion_gl_cv * T_CW_cv_glm; //mvp_fix;//
+    return projection * conversion_gl_cv * T_CW_cv_glm; //mvp_fix;//
 }
 
 void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspective, glm::mat4 &matProjection/*, glm::mat4 &matCVProjection*/, int img_width, int img_height, float alpha, float beta, float skew, float u0, float v0, float near, float far) {

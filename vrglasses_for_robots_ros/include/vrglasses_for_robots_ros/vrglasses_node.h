@@ -12,6 +12,7 @@
 
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <image_transport/image_transport.h>
 #include <kindr/minimal/quat-transformation.h>
 #include <opencv2/core.hpp>
@@ -45,6 +46,8 @@ private:
     ::ros::Subscriber odom_sub_; //usually imu (sensor S) pose of visim (T_WS)
     ::ros::Publisher  camera_odom_pub_; // camera in the model world frame (T_WC)
 
+    ::ros::Subscriber ortho_sub_, odom_ortho_sub_;
+
     image_transport::Publisher color_pub_;
     //image_transport::ImageTransport rgb_imt_;
     ros::Publisher dense_pointcloud_pub_;
@@ -56,20 +59,28 @@ private:
     //image_transport::ImageTransport depth_imt_;
     image_transport::ImageTransport image_transport_;
 
+    image_transport::Publisher depth_ortho_pub_;
+    image_transport::Publisher color_ortho_pub_;
+    image_transport::Publisher semantic_ortho_pub_;
+    ::ros::Publisher camera_odom_ortho_pub_;
 
-
-    glm::mat4 computeMVP(const kindr::minimal::QuatTransformation &pose);
+    glm::mat4 computeMVP(const kindr::minimal::QuatTransformation &pose, glm::mat4 &projection);
 
     kindr::minimal::QuatTransformation computeT_WC(const geometry_msgs::Pose &pose);
 
     void odomCallback(const nav_msgs::Odometry &msg);
+
+    void orthoImgCallback(const std_msgs::Float32MultiArray &msg);
+
+    void odomOrthoCallback(const nav_msgs::Odometry &msg);
 
     void publishDenseSemanticCloud(const std_msgs::Header header, const sensor_msgs::ImagePtr &depth_map, const cv::Mat& semantic_map);
 
     // rendering
     vrglasses_for_robots::VulkanRenderer* renderer_;
     glm::mat4 perpective_;
-    double near_ = 0.1, far_ = 500.0;
+    glm::mat4 orthographic_projection_matrix_;
+    double near_ = -1.0, far_ = -1.0; // need to be defined in the launch file - smaller range better
 
     cv::Mat result_depth_map_, result_rgbs_map_,result_rgb_map_,result_s_map_;
 
@@ -89,13 +100,15 @@ private:
             f = 455;
             cx = 376.5;
             cy = 240.5;
-            w = 752;
-            h = 480;
+            w = 4096; // for ortho also
+            h = 4096; // for ortho also
             imu_image_delay = 1;  // nanosec
 
             sampling_factor = 10;
             Eigen::Matrix<double, 4, 4> t_sc;
-            t_sc << 0, 0, 1, 0.015, -1, 0, 0, 0.055, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            //t_sc << 0, 0, 1, 0.015, -1, 0, 0, 0.055, 0, -1, 0, 0.0065, 0, 0, 0, 1;
+            t_sc << 0, 0, 1, 0.0, -1, 0, 0, 0.0, 0, -1, 0, 0.0, 0, 0, 0, 1;
+            //t_sc << 1, 0, 0, 0,    0, 1, 0, 0,    0, 0, 1, 0,   0, 0, 0, 1;
             T_SC = kindr::minimal::QuatTransformation(t_sc);
         }
         // todo load from json project
