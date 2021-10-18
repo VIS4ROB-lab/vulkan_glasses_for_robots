@@ -1,16 +1,20 @@
 #!/usr/bin/env python
 
+import sys
 import rospy
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray
 import pywavefront
 import numpy as np
 
-def model_limits():
-    scene = pywavefront.Wavefront('/home/fabiola/datasets/2.1_delivery_models/house_garden/house_garden_house_garden.obj', create_materials=True)
+def model_limits(obj_file):
+    scene = pywavefront.Wavefront(obj_file, create_materials=True)
     for name, material in scene.materials.items():# assuming only one material
-        print(material.vertex_format)
-        material.vertices
+        
+        if material.vertex_format != 'T2F_N3F_V3F':
+            print(material.vertex_format)
+            raise
+
 
         # extract all x coordinates (every 8th element starting with 6th)
         xVertices = material.vertices[5::8]
@@ -38,7 +42,7 @@ def model_limits():
 
         diff_x = x_max - x_min
         diff_y = y_max - y_min
-        diff_z = z_max - z_min
+
         diff_max = max(diff_x,diff_y)
         half_diff_max = diff_max / 2.0 # assumes a square output image
 
@@ -51,16 +55,18 @@ def model_limits():
         b = - half_diff_max + x_cam
         t = half_diff_max + x_cam
 
-        print(l, r, b, t, x_cam, y_cam, z_cam)
+        print("coordinate center: u({})/v({})".format(x_cam, y_cam))
+        print("scale(4096 resolution): {} units per pixel".format(diff_max/4096.0))
+        print("z-range: {}/{}".format(z_cam-z_max, z_cam-z_min))
         return l, r, b, t, x_cam, y_cam, z_cam
 
-def publisher():
+def publisher(obj_file):
     rospy.init_node('pose_publisher', anonymous=True)
     pub = rospy.Publisher('/firefly/odometry_ortho', Odometry, queue_size=1)
     pub_ortho_config = rospy.Publisher('/firefly/ortho_config', Float32MultiArray, queue_size=1)
     rate = rospy.Rate(10) # Hz
 
-    l, r, b, t, x, y, z = model_limits()
+    l, r, b, t, x, y, z = model_limits(obj_file)
 
     while not rospy.is_shutdown():
         p = Odometry()
@@ -69,10 +75,10 @@ def publisher():
         p.pose.pose.position.y =  y
         p.pose.pose.position.z =  z
         # Make sure the quaternion is valid and normalized
-        p.pose.pose.orientation.x = 0
-        p.pose.pose.orientation.y = 0.7071068
+        p.pose.pose.orientation.x = 1.0
+        p.pose.pose.orientation.y = 0.0
         p.pose.pose.orientation.z = 0.0
-        p.pose.pose.orientation.w = 0.7071068
+        p.pose.pose.orientation.w = 0.0
 
         ortho_config_msg = Float32MultiArray()
         ortho_config_msg.data = [l, r, b, t]
@@ -84,6 +90,6 @@ def publisher():
 
 if __name__ == '__main__':
     try:
-        publisher()
+        publisher(sys.argv[1])
     except rospy.ROSInterruptException:
         pass

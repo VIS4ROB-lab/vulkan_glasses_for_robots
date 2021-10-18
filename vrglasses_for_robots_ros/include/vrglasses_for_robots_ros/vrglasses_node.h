@@ -107,8 +107,8 @@ private:
             sampling_factor = 10;
             Eigen::Matrix<double, 4, 4> t_sc;
             //t_sc << 0, 0, 1, 0.015, -1, 0, 0, 0.055, 0, -1, 0, 0.0065, 0, 0, 0, 1;
-            t_sc << 0, 0, 1, 0.0, -1, 0, 0, 0.0, 0, -1, 0, 0.0, 0, 0, 0, 1;
-            //t_sc << 1, 0, 0, 0,    0, 1, 0, 0,    0, 0, 1, 0,   0, 0, 0, 1;
+            //t_sc << 0, 0, 1, 0.0, -1, 0, 0, 0.0, 0, -1, 0, 0.0, 0, 0, 0, 1;
+            t_sc << 1, 0, 0, 0,    0, 1, 0, 0,    0, 0, 1, 0,   0, 0, 0, 1;
             T_SC = kindr::minimal::QuatTransformation(t_sc);
         }
         // todo load from json project
