@@ -10,20 +10,28 @@ import numpy as np
 def model_limits(obj_file):
     scene = pywavefront.Wavefront(obj_file, create_materials=True)
     for name, material in scene.materials.items():# assuming only one material
-        
-        if material.vertex_format != 'T2F_N3F_V3F':
+
+        if material.vertex_format == 'T2F_N3F_V3F':
             print(material.vertex_format)
+            # extract all x coordinates (every 8th element starting with 6th)
+            xVertices = material.vertices[5::8]
+
+            # extract all y coordinates (every 8th element starting with 7th)
+            yVertices = material.vertices[6::8]
+
+            # extract all z coordinates (every 8th element sarting with 8th)
+            zVertices = material.vertices[7::8]
+        elif material.vertex_format == 'T2F_V3F':
+            # extract all x coordinates (every 8th element starting with 6th)
+            xVertices = material.vertices[2::8]
+
+            # extract all y coordinates (every 8th element starting with 7th)
+            yVertices = material.vertices[3::8]
+
+            # extract all z coordinates (every 8th element sarting with 8th)
+            zVertices = material.vertices[4::8]
+        else:
             raise
-
-
-        # extract all x coordinates (every 8th element starting with 6th)
-        xVertices = material.vertices[5::8]
-
-        # extract all y coordinates (every 8th element starting with 7th)
-        yVertices = material.vertices[6::8]
-
-        # extract all z coordinates (every 8th element sarting with 8th)
-        zVertices = material.vertices[7::8]
 
         # calculate min/max of coordinates
         x_max = max(xVertices)
