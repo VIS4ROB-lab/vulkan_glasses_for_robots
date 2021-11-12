@@ -39,4 +39,6 @@ target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBRARIES} ${Vulkan_LIBRARY} )
 
 cs_install()
 cs_install_scripts(scripts/pose_publisher.py)
+cs_install_scripts(scripts/ortho_model_top_view.py)
+cs_install_scripts(scripts/pose_publisher_viewpoints.py)
 cs_export()
