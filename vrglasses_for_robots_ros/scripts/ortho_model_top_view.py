@@ -15,7 +15,6 @@ def model_limits(obj_file):
             print(material.vertex_format)
             # extract all x coordinates (every 8th element starting with 6th)
             xVertices = material.vertices[5::8]
-
             # extract all y coordinates (every 8th element starting with 7th)
             yVertices = material.vertices[6::8]
 
@@ -23,13 +22,13 @@ def model_limits(obj_file):
             zVertices = material.vertices[7::8]
         elif material.vertex_format == 'T2F_V3F':
             # extract all x coordinates (every 8th element starting with 6th)
-            xVertices = material.vertices[2::8]
+            xVertices = material.vertices[2::5]
 
             # extract all y coordinates (every 8th element starting with 7th)
-            yVertices = material.vertices[3::8]
+            yVertices = material.vertices[3::5]
 
             # extract all z coordinates (every 8th element sarting with 8th)
-            zVertices = material.vertices[4::8]
+            zVertices = material.vertices[4::5]
         else:
             raise
 
@@ -54,14 +53,21 @@ def model_limits(obj_file):
         diff_max = max(diff_x,diff_y)
         half_diff_max = diff_max / 2.0 # assumes a square output image
 
+        print(diff_x)
+        print(diff_y)
+        print(diff_max)
+        print(half_diff_max)
+
         x_cam = x_min + (diff_x / 2.0)
         y_cam = y_min + (diff_y / 2.0)
         z_cam = z_max+ 2.0   # z needs to be bigger than z_max
-        l = - half_diff_max + y_cam
-        r = half_diff_max + y_cam
+        l = - half_diff_max
+        r = half_diff_max
 
-        b = - half_diff_max + x_cam
-        t = half_diff_max + x_cam
+        b = - half_diff_max
+        t = half_diff_max
+
+        print("l({})/r({})/b({})/t({})".format(l, r, b, t))
 
         print("coordinate center: u({})/v({})".format(x_cam, y_cam))
         print("scale(4096 resolution): {} units per pixel".format(diff_max/4096.0))
