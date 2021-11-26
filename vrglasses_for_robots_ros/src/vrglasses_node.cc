@@ -15,13 +15,14 @@
 VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private): nh_(nh), nh_private_(nh_private),
     image_transport_(nh_private_), initialized_(false) {
     renderer_ = nullptr;
-    odom_sub_ = nh_.subscribe("odometry", 500, &VRGlassesNode::odomCallback, this);
+    odom_sub_ = nh_.subscribe("odometry", 10, &VRGlassesNode::odomCallback, this);
 
     depth_pub_ = image_transport_.advertise("depth_map", 1);
+    depth_conf_pub_ = image_transport_.advertise("depth_conf_map", 1);
     color_pub_ = image_transport_.advertise("color_map", 1);
     semantic_pub_ = image_transport_.advertise("semantic_map", 1);
 
-    camera_odom_pub_ = nh_private_.advertise<nav_msgs::Odometry>("camera_odometry_out", 50);
+    camera_odom_pub_ = nh_private_.advertise<nav_msgs::Odometry>("camera_odometry_out", 1);
 
     //dense_pointcloud_pub_ =
     //        nh_private_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5); //TODO add param to enable the point cloud publication
@@ -163,6 +164,17 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         depth_msg = cv_bridge::CvImage(msg.header, "32FC1", result_depth_map_).toImageMsg();
         depth_msg->header.frame_id = camera_frame_id_;
         depth_pub_.publish(depth_msg);
+
+        // Generate depth + false confidence
+        const cv::Mat fake_confidence(cv::Mat::ones(result_depth_map_.size(), CV_32FC1));
+        const auto channels = std::vector<cv::Mat>{result_depth_map_, fake_confidence};
+        cv::Mat full_depth;
+        cv::merge(channels, full_depth);
+
+        sensor_msgs::ImagePtr depth_conf_msg;
+        depth_conf_msg = cv_bridge::CvImage(msg.header, "32FC2", full_depth).toImageMsg();
+        depth_conf_msg->header.frame_id = camera_frame_id_;
+        depth_conf_pub_.publish(depth_conf_msg);
 
         //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_); //TODO add param to enable the point cloud publication
     }

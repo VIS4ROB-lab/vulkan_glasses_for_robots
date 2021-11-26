@@ -53,6 +53,7 @@ private:
     //image_transport::ImageTransport semantic_imt_;
 
     image_transport::Publisher depth_pub_;
+    image_transport::Publisher depth_conf_pub_;
     //image_transport::ImageTransport depth_imt_;
     image_transport::ImageTransport image_transport_;
 
