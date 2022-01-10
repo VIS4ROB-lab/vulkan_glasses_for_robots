@@ -9,7 +9,7 @@ DEFINE_string(visim_project_folder, "/media/secssd/dataset/50s_house_45/visim", 
 DEFINE_string(camera_id, "cam0", "cammera id on the visim project");
 DEFINE_string(output_folder_path, "/media/secssd/tmp/render_test/a2", "result path");
 DEFINE_int32(step_skip, 1, "step skip");
-DEFINE_string(resource_folder, "/media/secssd/tmp/render_test/a2", "result path");
+DEFINE_string(resource_folder, "/media/secssd/tmp/render_test/a3", "result path");
 
 
 

@@ -6,13 +6,15 @@ from nav_msgs.msg import Odometry
 def publisher():
     pub = rospy.Publisher('/firefly/vi_sensor/ground_truth/odometry', Odometry, queue_size=1)
     rospy.init_node('pose_publisher', anonymous=True)
-    rate = rospy.Rate(10) # Hz
+    rate = rospy.Rate(500) # Hz
+    counter = 100
     while not rospy.is_shutdown():
         p = Odometry()
         p.header.stamp = rospy.Time.now()
         p.pose.pose.position.x = -0
         p.pose.pose.position.y = -60
-        p.pose.pose.position.z = 250.0
+        p.pose.pose.position.z = counter
+        counter = counter + 0.001
         # Make sure the quaternion is valid and normalized
         p.pose.pose.orientation.x = 0.0
         p.pose.pose.orientation.y = 0.707

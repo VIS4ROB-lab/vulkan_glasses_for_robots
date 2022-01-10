@@ -113,8 +113,15 @@ void VRGlassesNode::run()
 
     
     
-    while (::ros::ok()) {
+    // while (::ros::ok()) {
+    //   ::ros::spinOnce();
+    // }
+    
+    ::ros::Rate r(500); // 10 hz
+    while (::ros::ok())
+    {      
       ::ros::spinOnce();
+      r.sleep();
     }
 }
 
