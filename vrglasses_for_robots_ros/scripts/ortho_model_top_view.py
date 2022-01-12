@@ -4,8 +4,23 @@ import sys
 import rospy
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Float32MultiArray
+from sensor_msgs.msg import Image
+
 import pywavefront
 import numpy as np
+
+class OrthoMap:
+    def __init__(self):
+        return
+    def color_map_cb(self,img):
+        print('received color')
+        return
+    def semantic_map_cb(self,map):
+        print('received semantics')
+        return
+    def depth_map_cb(self,map):
+        print('received depth')
+        return
 
 def model_limits(obj_file):
     scene = pywavefront.Wavefront(obj_file, create_materials=True)
@@ -51,7 +66,7 @@ def model_limits(obj_file):
         diff_y = y_max - y_min
 
         diff_max = max(diff_x,diff_y)
-        half_diff_max = diff_max / 2.0 # assumes a square output image
+        half_diff_max = diff_max / 8.0 # assumes a square output image
 
         print(diff_x)
         print(diff_y)
@@ -60,7 +75,7 @@ def model_limits(obj_file):
 
         x_cam = x_min + (diff_x / 2.0)
         y_cam = y_min + (diff_y / 2.0)
-        z_cam = z_max+ 2.0   # z needs to be bigger than z_max
+        z_cam = z_max + 2.0   # z needs to be bigger than z_max
         l = - half_diff_max
         r = half_diff_max
 
@@ -74,20 +89,32 @@ def model_limits(obj_file):
         print("z-range: {}/{}".format(z_cam-z_max, z_cam-z_min))
         return l, r, b, t, x_cam, y_cam, z_cam
 
+def subscriber():
+    return
+
 def publisher(obj_file):
+    result_obj = OrthoMap()
     rospy.init_node('pose_publisher', anonymous=True)
     pub = rospy.Publisher('/firefly/odometry_ortho', Odometry, queue_size=1)
     pub_ortho_config = rospy.Publisher('/firefly/ortho_config', Float32MultiArray, queue_size=1)
-    rate = rospy.Rate(10) # Hz
+
+    sub_color_img = rospy.Subscriber("/firefly/vrglasses_for_robots_ros/ortho_color_map", Image, result_obj.color_map_cb,
+                                          queue_size=1)
+    sub_depth_img = rospy.Subscriber("/firefly/vrglasses_for_robots_ros/ortho_depth_map", Image, result_obj.depth_map_cb,
+                                          queue_size=1)
+    sub_semantic_img = rospy.Subscriber("/firefly/vrglasses_for_robots_ros/ortho_semantic_map", Image, result_obj.semantic_map_cb,
+                                          queue_size=1)
+
+    rate = rospy.Rate(1) # Hz
 
     l, r, b, t, x, y, z = model_limits(obj_file)
 
     while not rospy.is_shutdown():
         p = Odometry()
         p.header.stamp = rospy.Time.now()
-        p.pose.pose.position.x =  x
-        p.pose.pose.position.y =  y
-        p.pose.pose.position.z =  z
+        p.pose.pose.position.x = x
+        p.pose.pose.position.y = y
+        p.pose.pose.position.z = z
         # Make sure the quaternion is valid and normalized
         p.pose.pose.orientation.x = 1.0
         p.pose.pose.orientation.y = 0.0
