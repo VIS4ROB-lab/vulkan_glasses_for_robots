@@ -92,6 +92,7 @@ void VRGlassesNode::run()
     std::string model_list_file;
     std::string model_pose_file;
     std::string dynamic_model_pose_file;
+    std::string segments_model_file;
 
     if(nh_private_.getParam("model_folder", model_folder) &&
        nh_private_.getParam("model_list_file", model_list_file))
@@ -106,6 +107,11 @@ void VRGlassesNode::run()
         {
           ROS_INFO("Load with pose file (dynamic case): %s", dynamic_model_pose_file.c_str());
           renderer_->loadDynamicScene(dynamic_model_pose_file);
+        }
+        else if(nh_private_.getParam("segments_model_file", segments_model_file))
+        {
+          ROS_INFO("Load with pose file (with  multiple segments): %s", segments_model_file.c_str());
+          renderer_->loadDynamicSceneMultipleSegments(segments_model_file);
         }
         else
         {

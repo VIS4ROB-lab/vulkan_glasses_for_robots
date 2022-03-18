@@ -106,10 +106,13 @@ struct ThreeDModel{
   }
 };
 
+typedef std::pair<float, glm::mat4> StampedWayPoint;
+typedef std::pair<StampedWayPoint, StampedWayPoint> Segment;
+typedef std::vector<Segment> Trajectory;
 struct SceneItem{
   std::string model_name;
-  glm::mat4 start_pose; //< In global frame (world to model)
-  glm::mat4 end_pose; //< In global frame (world to model)
+  glm::mat4 static_pose;
+  Trajectory trajectory; //< In global frame (world to model)
 
   // This is for dynamic models
   float speed; //< Speed of motion
@@ -280,6 +283,8 @@ public:
   bool loadScene(const std::string &scene_file);
 
   bool loadDynamicScene(const std::string &dynamic_scene_file);
+
+  bool loadDynamicSceneMultipleSegments(const std::string &segments_scene_file);
 
   void copyVertex();
 

@@ -589,27 +589,40 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
 
       // Find pose at given time
       glm::mat4 item_pose;
-      if (scene_items_[idx].speed > 1e-4f) {
-        // Calculate the maximum time for moving to end position
-        const glm::vec3 start_position = glm::vec3(scene_items_[idx].start_pose[3]);
-        const glm::vec3 end_position = glm::vec3(scene_items_[idx].end_pose[3]);
-
-        float total_distance = glm::distance(end_position, start_position);
-        float max_time = total_distance / scene_items_[idx].speed;
-
-        // Check the current time along the trajectory:
-        scene_items_[idx].current_time = std::fmod(time, max_time);
+      if (!scene_items_[idx].trajectory.empty()) {
+        // Get the right segment of the overall trajectory
+        float max_time_total = scene_items_[idx].trajectory.back().second.first;
+        float query_time = std::fmod(time, max_time_total);
 
         // Get the pose of the model (assuming fixed orientation!)
+        auto match_seg = [&query_time](const Segment& seg) {
+          // Start-end of the segment
+          float start_time_seg = seg.first.first;
+          float end_time_seg = seg.second.first;
+          return query_time >= start_time_seg && query_time <= end_time_seg;
+        };
+
+        auto segment_cur = std::find_if(scene_items_[idx].trajectory.begin(),
+                                        scene_items_[idx].trajectory.end(),
+                                        match_seg);
+
+        // Check the current time along the trajectory:
+        scene_items_[idx].current_time = query_time - segment_cur->first.first;
+
+        // Calculate position
+        const glm::vec3 start_position = glm::vec3(segment_cur->first.second[3]);
+        const glm::vec3 end_position = glm::vec3(segment_cur->second.second[3]);
+        float total_distance = glm::distance(end_position, start_position);
+
         const glm::vec3 direction = (end_position - start_position) / total_distance;
         const glm::vec3 interp_position = start_position + scene_items_[idx].current_time * scene_items_[idx].speed * direction;
-        item_pose = scene_items_[idx].start_pose;
+        item_pose = segment_cur->first.second;
         // Overwrite translational part (1 is needed to keep the homogeneous
         // matrix format)
         item_pose[3] = glm::vec4(interp_position, 1);
       } else {
-        // In this case we have only 1 pose
-        item_pose = scene_items_[idx].start_pose;
+        // In this case we have only a static pose
+        item_pose = scene_items_[idx].static_pose;
       }
 
       glm::mat4 mvp_cv = vp_cv_ * item_pose;
@@ -1664,12 +1677,11 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
         boost::split(strs, line, boost::is_any_of(";"));
         scene_items_.push_back(SceneItem());
         scene_items_.back().model_name = strs[0];
-        scene_items_.back().start_pose = parsePose(strs[1]);
+        scene_items_.back().static_pose = parsePose(strs[1]);
 
         // For dynamic objects -- not actually used in this case
         scene_items_.back().speed = 0.f;
         scene_items_.back().current_time = 0.f;
-        scene_items_.back().end_pose = parsePose(strs[1]);
       }
     } else {
       throw std::invalid_argument("file could not be opened");
@@ -1685,8 +1697,8 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
   // We assume that the input file has the following structure per row:
   // model_name;speed;rotation;start position;end position
   //
-  // If a model is static (ie. velocity is 0), then the end_position is set
-  // to be equal to the start_position, regardless of what's in the file
+  // If a model is static (ie. velocity is 0), then the we set the static pose
+  // to be the same as the starting pose
 
   if (boost::filesystem::exists(dynamic_scene_file)) {
     // Read scene file
@@ -1706,16 +1718,24 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
 
         const std::string start_pose_str = strs[3] + " " + strs[2];
         const auto start_pose = parsePose(start_pose_str);
-        scene_items_.back().start_pose = start_pose;
+        scene_items_.back().static_pose = start_pose;
 
-        if (std::fabs(scene_items_.back().speed) < 1e-4f) {
-          // Speed is 0 : force start and end pose to be the same
-          scene_items_.back().end_pose = start_pose;
-        } else {
+        if (std::fabs(scene_items_.back().speed) > 1e-4f) {
           // Here velocity is not 0, so use actual end pose
           const std::string end_pose_str = strs[4] + " " + strs[2];
           const auto end_pose = parsePose(end_pose_str);
-          scene_items_.back().end_pose = end_pose;
+
+          // Generate trajectory (in this use-case, we have 1 starting position
+          // and 1 end position, so the trajectory is made up by one segment
+          // only)
+          float start_time = 0.f;
+          StampedWayPoint start_wp{start_time, start_pose};
+
+          float total_distance = glm::distance(end_pose[3], start_pose[3]);
+          float end_time = total_distance / scene_items_.back().speed;
+          StampedWayPoint end_wp{end_time, end_pose};
+
+          scene_items_.back().trajectory.push_back({start_wp, end_wp});
         }
         
         // Now generate the trajectory for the model
@@ -1733,17 +1753,118 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
   return false;
 }
 
+bool vrglasses_for_robots::VulkanRenderer::loadDynamicSceneMultipleSegments(
+    const std::string &segments_scene_file) {
+  // We assume that the input file has the following structure per row:
+  // model_name;speed;rot0 x0 y0 z0 x1 y1 z1;rot1 x1 y1 z1 x2 y2 z2; ....
+  //
+  // If a model is static (ie. velocity is 0), then the we set the static pose
+  // to be the same as the starting pose
+
+  if (boost::filesystem::exists(segments_scene_file)) {
+    // Read scene file
+    std::ifstream scene_file(segments_scene_file.c_str());
+    if (scene_file.is_open()) {
+      std::string line;
+      while (std::getline(scene_file, line)) {
+        boost::trim(line);
+        if (line.empty())
+          continue;
+
+        std::vector<std::string> strs;
+        boost::split(strs, line, boost::is_any_of(";"));
+        scene_items_.push_back(SceneItem());
+        scene_items_.back().model_name = strs[0];
+        scene_items_.back().speed = std::stof(strs[1]);
+
+        if (std::fabs(scene_items_.back().speed) > 1e-4f) {
+          // Dynamic model
+
+          // Iterate over the segments (skip first 2 because they are the model
+          // name and the speed)
+          float cumulative_time = 0.f;
+          for(size_t i = 2; i < strs.size(); ++i) {
+            // Extract the segment definition (rot, pos0, pos1)
+            std::vector<std::string> segment_str;
+            boost::split(segment_str, strs[i], boost::is_any_of(" "));
+
+            // Start of the segment
+            glm::mat4 start_pose_wp  = glm::translate(
+                  glm::mat4(1.0),
+                  glm::vec3(std::stod(segment_str[1]),
+                  std::stod(segment_str[2]), std::stod(segment_str[3])));
+            start_pose_wp *= glm::eulerAngleZ((float)glm::radians(std::stod(segment_str[0])));
+            StampedWayPoint start_stamped_wp{cumulative_time, start_pose_wp};
+
+            // End of segment
+            glm::mat4 end_pose_wp  = glm::translate(
+                  glm::mat4(1.0),
+                  glm::vec3(std::stod(segment_str[4]),
+                  std::stod(segment_str[5]), std::stod(segment_str[6])));
+            end_pose_wp *= glm::eulerAngleZ((float)glm::radians(std::stod(segment_str[0])));
+
+            // Compute end time for the segment
+            float total_distance = glm::distance(end_pose_wp[3], start_pose_wp[3]);
+            cumulative_time += total_distance / scene_items_.back().speed;
+            StampedWayPoint end_stamped_wp{cumulative_time, end_pose_wp};
+
+            // Create actual segment and push it to the trajectory
+            scene_items_.back().trajectory.push_back({start_stamped_wp,
+                                                      end_stamped_wp});
+          }
+
+          // Debug - print segments
+          /*
+          std::cout << "MODEL: " << scene_items_.back().model_name << std::endl;
+          for (size_t i = 0; i < scene_items_.back().trajectory.size(); ++i) {
+            const auto segment = scene_items_.back().trajectory[i];
+            std::cout << "Segment " << i << ": " << std::endl;
+            std::cout << "\tTime: "
+                      << segment.first.first << " --> " << segment.second.first
+                      << std::endl;
+            std::cout << "\tPosition: "
+                      << glm::to_string(segment.first.second[3])
+                      << " --> " << glm::to_string(segment.second.second[3])
+                      << std::endl;
+          }
+          */
+        } else {
+          // Static model
+          std::vector<std::string> static_pose_str;
+          boost::split(static_pose_str, strs[2], boost::is_any_of(" "));
+          glm::mat4 static_pose = glm::translate(
+              glm::mat4(1.0),
+              glm::vec3(std::stod(static_pose_str[1]),
+                std::stod(static_pose_str[2]), std::stod(static_pose_str[3])));
+          static_pose *= glm::eulerAngleZ((float)glm::radians(std::stod(static_pose_str[0])));
+
+          scene_items_.back().static_pose = static_pose;
+        }
+
+        // Now generate the trajectory for the model
+        scene_items_.back().current_time = 0.f;
+      }
+    } else {
+      throw std::invalid_argument("scene file could be opened");
+    }
+  } else {
+    throw std::invalid_argument("input folder could not be found");
+  }
+
+  // Check that the trajectory is not empty, but contains at least one element
+  return false;
+}
+
 void vrglasses_for_robots::VulkanRenderer::noFileScene() {
 
   for (size_t idx = 0; idx < models_.size(); idx++) {
     scene_items_.push_back(SceneItem());
     scene_items_.back().model_name = models_[idx].name;
-    scene_items_.back().start_pose = glm::mat4(1.0);
+    scene_items_.back().static_pose = glm::mat4(1.0);
 
     // For dynamic objects -- not actually used in this case
     scene_items_.back().speed = 0.f;
     scene_items_.back().current_time = 0.f;
-    scene_items_.back().end_pose = glm::mat4(1.0);
   }
 
 }
