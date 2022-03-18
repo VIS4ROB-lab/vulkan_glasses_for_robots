@@ -108,10 +108,14 @@ struct ThreeDModel{
 
 struct SceneItem{
   std::string model_name;
-  glm::mat4 T_World2Model;
-  SceneItem():model_name("none"){
-    T_World2Model = glm::mat4(1.0);
-  }
+  glm::mat4 start_pose; //< In global frame (world to model)
+  glm::mat4 end_pose; //< In global frame (world to model)
+
+  // This is for dynamic models
+  float speed; //< Speed of motion
+  float current_time; //< Where the model is at the moment
+
+  SceneItem() : model_name("none"), speed(0.f), current_time(0.f) {}
 };
 
 struct Texture2D{
@@ -210,7 +214,7 @@ class VulkanRenderer {
 
   void buildRenderPass(uint32_t width, uint32_t height);
 
-  void drawTriangles(uint32_t width, uint32_t height);
+  void drawTriangles(uint32_t width, uint32_t height, const float &time=0.f);
 
   void saveImageDepthmap(
       uint32_t width, uint32_t height, cv::Mat& result_depth_map,
@@ -275,9 +279,12 @@ public:
 
   bool loadScene(const std::string &scene_file);
 
+  bool loadDynamicScene(const std::string &dynamic_scene_file);
+
   void copyVertex();
 
-  void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map);
+  void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map,
+                  const float &time=0.f);
 
   void cleanUp();
   

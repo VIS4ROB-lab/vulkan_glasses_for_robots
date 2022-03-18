@@ -91,14 +91,21 @@ void VRGlassesNode::run()
     std::string model_folder;
     std::string model_list_file;
     std::string model_pose_file;
+    std::string dynamic_model_pose_file;
 
-    if(nh_private_.getParam("model_folder", model_folder) && nh_private_.getParam("model_list_file", model_list_file))
+    if(nh_private_.getParam("model_folder", model_folder) &&
+       nh_private_.getParam("model_list_file", model_list_file))
     {
         renderer_->loadMeshs(model_folder,model_list_file);
         if(nh_private_.getParam("model_pose_file", model_pose_file))
         {
             ROS_INFO("Load with pose file: %s", model_pose_file.c_str());
             renderer_->loadScene(model_pose_file);
+        }
+        else if(nh_private_.getParam("dynamic_model_pose_file", dynamic_model_pose_file))
+        {
+          ROS_INFO("Load with pose file (dynamic case): %s", dynamic_model_pose_file.c_str());
+          renderer_->loadDynamicScene(dynamic_model_pose_file);
         }
         else
         {
@@ -107,14 +114,16 @@ void VRGlassesNode::run()
         }
         
     } 
-    else if( nh_private_.getParam("mesh_obj_file", mesh_obj_file) && nh_private_.getParam("texture_file", texture_file))
+    else if(nh_private_.getParam("mesh_obj_file", mesh_obj_file) &&
+            nh_private_.getParam("texture_file", texture_file))
     {
         // Load Mesh
         ROS_INFO("Loading single file");
         renderer_->loadMesh(mesh_obj_file,texture_file);
         renderer_->noFileScene();
     }
-    else{
+    else
+    {
         ROS_ERROR("mesh_obj_file and texture_file need to be defined parameter, alternatively model_folder and model_list_file");
     }
 
@@ -141,7 +150,7 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         kindr::minimal::QuatTransformation T_WC = computeT_WC(msg.pose.pose);
         glm::mat4 mvp = computeMVP(T_WC);
         renderer_->setCamera(mvp);
-        renderer_->renderMesh(result_depth_map_, result_rgbs_map_);
+        renderer_->renderMesh(result_depth_map_, result_rgbs_map_, last_frame_time_.toSec());
 
         nav_msgs::Odometry odom_msg = msg;        
         tf::poseKindrToMsg(T_WC,&(odom_msg.pose.pose));

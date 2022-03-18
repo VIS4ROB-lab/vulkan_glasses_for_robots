@@ -530,7 +530,8 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(uint32_t width,
 }
 
 void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
-                                                         uint32_t height) {
+                                                         uint32_t height,
+                                                         const float &time) {
   /*
           Command buffer creation
   */
@@ -566,8 +567,8 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
     VkViewport viewport = {};
     viewport.height = (float)height;
     viewport.width = (float)width;
-    viewport.minDepth = (float)0.0f;
-    viewport.maxDepth = (float)1.0f;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
     // Update dynamic scissor state
@@ -586,7 +587,32 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
 
     for (size_t idx = 0; idx < scene_items_.size(); idx++) {
 
-      glm::mat4 mvp_cv = vp_cv_ * scene_items_[idx].T_World2Model;
+      // Find pose at given time
+      glm::mat4 item_pose;
+      if (scene_items_[idx].speed > 1e-4f) {
+        // Calculate the maximum time for moving to end position
+        const glm::vec3 start_position = glm::vec3(scene_items_[idx].start_pose[3]);
+        const glm::vec3 end_position = glm::vec3(scene_items_[idx].end_pose[3]);
+
+        float total_distance = glm::distance(end_position, start_position);
+        float max_time = total_distance / scene_items_[idx].speed;
+
+        // Check the current time along the trajectory:
+        scene_items_[idx].current_time = std::fmod(time, max_time);
+
+        // Get the pose of the model (assuming fixed orientation!)
+        const glm::vec3 direction = (end_position - start_position) / total_distance;
+        const glm::vec3 interp_position = start_position + scene_items_[idx].current_time * scene_items_[idx].speed * direction;
+        item_pose = scene_items_[idx].start_pose;
+        // Overwrite translational part (1 is needed to keep the homogeneous
+        // matrix format)
+        item_pose[3] = glm::vec4(interp_position, 1);
+      } else {
+        // In this case we have only 1 pose
+        item_pose = scene_items_[idx].start_pose;
+      }
+
+      glm::mat4 mvp_cv = vp_cv_ * item_pose;
 
       vkCmdPushConstants(commandBuffer, pipelineLayout,
                          VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(mvp_cv),
@@ -1314,9 +1340,10 @@ void vrglasses_for_robots::VulkanRenderer::setCamera(glm::mat4 mvp) {
 }
 
 void vrglasses_for_robots::VulkanRenderer::renderMesh(
-    cv::Mat &result_depth_map, cv::Mat &result_attribute_map) {
+    cv::Mat &result_depth_map, cv::Mat &result_attribute_map,
+    const float &time) {
 
-  drawTriangles(width_, height_);
+  drawTriangles(width_, height_, time);
 
   saveImageDepthmap(width_, height_, result_depth_map, result_attribute_map);
   // sparseTest(landmarks_3d, result_depth_map);
@@ -1610,7 +1637,7 @@ void vrglasses_for_robots::VulkanRenderer::copyVertex() {
 
 }
 
-glm::mat4 parsePose(std::string pose_text) {
+glm::mat4 parsePose(const std::string &pose_text) {
   std::vector<std::string> strs;
   boost::split(strs, pose_text, boost::is_any_of(" "));
   glm::mat4 result = glm::translate(
@@ -1637,7 +1664,12 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
         boost::split(strs, line, boost::is_any_of(";"));
         scene_items_.push_back(SceneItem());
         scene_items_.back().model_name = strs[0];
-        scene_items_.back().T_World2Model = parsePose(strs[1]);
+        scene_items_.back().start_pose = parsePose(strs[1]);
+
+        // For dynamic objects -- not actually used in this case
+        scene_items_.back().speed = 0.f;
+        scene_items_.back().current_time = 0.f;
+        scene_items_.back().end_pose = parsePose(strs[1]);
       }
     } else {
       throw std::invalid_argument("file could not be opened");
@@ -1647,12 +1679,71 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
   }
   return true;
 }
+
+bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
+    const std::string &dynamic_scene_file) {
+  // We assume that the input file has the following structure per row:
+  // model_name;speed;rotation;start position;end position
+  //
+  // If a model is static (ie. velocity is 0), then the end_position is set
+  // to be equal to the start_position, regardless of what's in the file
+
+  if (boost::filesystem::exists(dynamic_scene_file)) {
+    // Read scene file
+    std::ifstream scene_file(dynamic_scene_file.c_str());
+    if (scene_file.is_open()) {
+      std::string line;
+      while (std::getline(scene_file, line)) {
+        boost::trim(line);
+        if (line.empty())
+          continue;
+
+        std::vector<std::string> strs;
+        boost::split(strs, line, boost::is_any_of(";"));
+        scene_items_.push_back(SceneItem());
+        scene_items_.back().model_name = strs[0];
+        scene_items_.back().speed = std::stof(strs[1]);
+
+        const std::string start_pose_str = strs[3] + " " + strs[2];
+        const auto start_pose = parsePose(start_pose_str);
+        scene_items_.back().start_pose = start_pose;
+
+        if (std::fabs(scene_items_.back().speed) < 1e-4f) {
+          // Speed is 0 : force start and end pose to be the same
+          scene_items_.back().end_pose = start_pose;
+        } else {
+          // Here velocity is not 0, so use actual end pose
+          const std::string end_pose_str = strs[4] + " " + strs[2];
+          const auto end_pose = parsePose(end_pose_str);
+          scene_items_.back().end_pose = end_pose;
+        }
+        
+        // Now generate the trajectory for the model
+        scene_items_.back().current_time = 0.f;
+        
+      }
+    } else {
+      throw std::invalid_argument("scene file could be opened");
+    }
+  } else {
+    throw std::invalid_argument("input folder could not be found");
+  }
+
+  // Check that the trajectory is not empty, but contains at least one element
+  return false;
+}
+
 void vrglasses_for_robots::VulkanRenderer::noFileScene() {
 
   for (size_t idx = 0; idx < models_.size(); idx++) {
     scene_items_.push_back(SceneItem());
     scene_items_.back().model_name = models_[idx].name;
-    scene_items_.back().T_World2Model = glm::mat4(1.0);
+    scene_items_.back().start_pose = glm::mat4(1.0);
+
+    // For dynamic objects -- not actually used in this case
+    scene_items_.back().speed = 0.f;
+    scene_items_.back().current_time = 0.f;
+    scene_items_.back().end_pose = glm::mat4(1.0);
   }
 
 }
