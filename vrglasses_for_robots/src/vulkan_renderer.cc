@@ -1695,7 +1695,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
 bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
     const std::string &dynamic_scene_file) {
   // We assume that the input file has the following structure per row:
-  // model_name;speed;rotation;start position;end position
+  // model_name;speed;rot0 x0 y0 z0 x1 y1 z1;rot1 x1 y1 z1 x2 y2 z2; ....
   //
   // If a model is static (ie. velocity is 0), then the we set the static pose
   // to be the same as the starting pose
@@ -1703,67 +1703,6 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
   if (boost::filesystem::exists(dynamic_scene_file)) {
     // Read scene file
     std::ifstream scene_file(dynamic_scene_file.c_str());
-    if (scene_file.is_open()) {
-      std::string line;
-      while (std::getline(scene_file, line)) {
-        boost::trim(line);
-        if (line.empty())
-          continue;
-
-        std::vector<std::string> strs;
-        boost::split(strs, line, boost::is_any_of(";"));
-        scene_items_.push_back(SceneItem());
-        scene_items_.back().model_name = strs[0];
-        scene_items_.back().speed = std::stof(strs[1]);
-
-        const std::string start_pose_str = strs[3] + " " + strs[2];
-        const auto start_pose = parsePose(start_pose_str);
-        scene_items_.back().static_pose = start_pose;
-
-        if (std::fabs(scene_items_.back().speed) > 1e-4f) {
-          // Here velocity is not 0, so use actual end pose
-          const std::string end_pose_str = strs[4] + " " + strs[2];
-          const auto end_pose = parsePose(end_pose_str);
-
-          // Generate trajectory (in this use-case, we have 1 starting position
-          // and 1 end position, so the trajectory is made up by one segment
-          // only)
-          float start_time = 0.f;
-          StampedWayPoint start_wp{start_time, start_pose};
-
-          float total_distance = glm::distance(end_pose[3], start_pose[3]);
-          float end_time = total_distance / scene_items_.back().speed;
-          StampedWayPoint end_wp{end_time, end_pose};
-
-          scene_items_.back().trajectory.push_back({start_wp, end_wp});
-        }
-        
-        // Now generate the trajectory for the model
-        scene_items_.back().current_time = 0.f;
-        
-      }
-    } else {
-      throw std::invalid_argument("scene file could be opened");
-    }
-  } else {
-    throw std::invalid_argument("input folder could not be found");
-  }
-
-  // Check that the trajectory is not empty, but contains at least one element
-  return false;
-}
-
-bool vrglasses_for_robots::VulkanRenderer::loadDynamicSceneMultipleSegments(
-    const std::string &segments_scene_file) {
-  // We assume that the input file has the following structure per row:
-  // model_name;speed;rot0 x0 y0 z0 x1 y1 z1;rot1 x1 y1 z1 x2 y2 z2; ....
-  //
-  // If a model is static (ie. velocity is 0), then the we set the static pose
-  // to be the same as the starting pose
-
-  if (boost::filesystem::exists(segments_scene_file)) {
-    // Read scene file
-    std::ifstream scene_file(segments_scene_file.c_str());
     if (scene_file.is_open()) {
       std::string line;
       while (std::getline(scene_file, line)) {

@@ -118,7 +118,9 @@ struct SceneItem{
   float speed; //< Speed of motion
   float current_time; //< Where the model is at the moment
 
-  SceneItem() : model_name("none"), speed(0.f), current_time(0.f) {}
+  SceneItem() : model_name("none"), speed(0.f), current_time(0.f) {
+    static_pose = glm::mat4(1.0);
+  }
 };
 
 struct Texture2D{
@@ -283,8 +285,6 @@ public:
   bool loadScene(const std::string &scene_file);
 
   bool loadDynamicScene(const std::string &dynamic_scene_file);
-
-  bool loadDynamicSceneMultipleSegments(const std::string &segments_scene_file);
 
   void copyVertex();
 
