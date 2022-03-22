@@ -615,7 +615,8 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
         float total_distance = glm::distance(end_position, start_position);
 
         const glm::vec3 direction = (end_position - start_position) / total_distance;
-        const glm::vec3 interp_position = start_position + scene_items_[idx].current_time * scene_items_[idx].speed * direction;
+        const glm::vec3 interp_position = start_position +
+            scene_items_[idx].current_time * scene_items_[idx].speed * direction;
         item_pose = segment_cur->first.second;
         // Overwrite translational part (1 is needed to keep the homogeneous
         // matrix format)
@@ -1695,7 +1696,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
 bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
     const std::string &dynamic_scene_file) {
   // We assume that the input file has the following structure per row:
-  // model_name;speed;rot0 x0 y0 z0 x1 y1 z1;rot1 x1 y1 z1 x2 y2 z2; ....
+  // model_name;speed;x0 y0 z0 rot0; x1 y1 z1 rot1; ....
   //
   // If a model is static (ie. velocity is 0), then the we set the static pose
   // to be the same as the starting pose
@@ -1722,27 +1723,14 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
           // Iterate over the segments (skip first 2 because they are the model
           // name and the speed)
           float cumulative_time = 0.f;
-          for(size_t i = 2; i < strs.size(); ++i) {
-            // Extract the segment definition (rot, pos0, pos1)
-            std::vector<std::string> segment_str;
-            boost::split(segment_str, strs[i], boost::is_any_of(" "));
+          for(size_t i = 2; i < strs.size() - 1; ++i) {
+            glm::mat4 start_pose_wp = parsePose(strs[i]);
+            glm::mat4 end_pose_wp = parsePose(strs[i+1]);
 
             // Start of the segment
-            glm::mat4 start_pose_wp  = glm::translate(
-                  glm::mat4(1.0),
-                  glm::vec3(std::stod(segment_str[1]),
-                  std::stod(segment_str[2]), std::stod(segment_str[3])));
-            start_pose_wp *= glm::eulerAngleZ((float)glm::radians(std::stod(segment_str[0])));
             StampedWayPoint start_stamped_wp{cumulative_time, start_pose_wp};
 
-            // End of segment
-            glm::mat4 end_pose_wp  = glm::translate(
-                  glm::mat4(1.0),
-                  glm::vec3(std::stod(segment_str[4]),
-                  std::stod(segment_str[5]), std::stod(segment_str[6])));
-            end_pose_wp *= glm::eulerAngleZ((float)glm::radians(std::stod(segment_str[0])));
-
-            // Compute end time for the segment
+            // End of segment & Compute end time for the segment
             float total_distance = glm::distance(end_pose_wp[3], start_pose_wp[3]);
             cumulative_time += total_distance / scene_items_.back().speed;
             StampedWayPoint end_stamped_wp{cumulative_time, end_pose_wp};
@@ -1755,9 +1743,9 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
           // Debug - print segments
           /*
           std::cout << "MODEL: " << scene_items_.back().model_name << std::endl;
-          for (size_t i = 0; i < scene_items_.back().trajectory.size(); ++i) {
-            const auto segment = scene_items_.back().trajectory[i];
-            std::cout << "Segment " << i << ": " << std::endl;
+          size_t counter = 0;
+          for (const auto &segment : scene_items_.back().trajectory) {
+            std::cout << "Segment " << counter++ << ": " << std::endl;
             std::cout << "\tTime: "
                       << segment.first.first << " --> " << segment.second.first
                       << std::endl;
