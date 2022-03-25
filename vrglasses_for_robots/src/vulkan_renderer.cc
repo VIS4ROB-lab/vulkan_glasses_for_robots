@@ -590,37 +590,7 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
       // Find pose at given time
       glm::mat4 item_pose;
       if (!scene_items_[idx].trajectory.empty()) {
-        // Get the right segment of the overall trajectory
-        float max_time_total = scene_items_[idx].trajectory.back().second.first;
-        float query_time = std::fmod(time, max_time_total);
-
-        // Get the pose of the model (assuming fixed orientation!)
-        auto match_seg = [&query_time](const Segment& seg) {
-          // Start-end of the segment
-          float start_time_seg = seg.first.first;
-          float end_time_seg = seg.second.first;
-          return query_time >= start_time_seg && query_time <= end_time_seg;
-        };
-
-        auto segment_cur = std::find_if(scene_items_[idx].trajectory.begin(),
-                                        scene_items_[idx].trajectory.end(),
-                                        match_seg);
-
-        // Check the current time along the trajectory:
-        scene_items_[idx].current_time = query_time - segment_cur->first.first;
-
-        // Calculate position
-        const glm::vec3 start_position = glm::vec3(segment_cur->first.second[3]);
-        const glm::vec3 end_position = glm::vec3(segment_cur->second.second[3]);
-        float total_distance = glm::distance(end_position, start_position);
-
-        const glm::vec3 direction = (end_position - start_position) / total_distance;
-        const glm::vec3 interp_position = start_position +
-            scene_items_[idx].current_time * scene_items_[idx].speed * direction;
-        item_pose = segment_cur->first.second;
-        // Overwrite translational part (1 is needed to keep the homogeneous
-        // matrix format)
-        item_pose[3] = glm::vec4(interp_position, 1);
+        item_pose = getPoseAlongPath(scene_items_[idx], time);
       } else {
         // In this case we have only a static pose
         item_pose = scene_items_[idx].static_pose;
@@ -1661,6 +1631,147 @@ glm::mat4 parsePose(const std::string &pose_text) {
   return result;
 }
 
+glm::mat4 vrglasses_for_robots::VulkanRenderer::getPoseAlongPath(
+    SceneItem& item, const float time) {
+  // Get the right segment of the overall trajectory
+  float max_time_total = item.trajectory.back().second.first;
+  float query_time = std::fmod(time, max_time_total);
+
+  // Get the pose of the model (assuming fixed orientation!)
+  auto match_seg = [&query_time](const Segment& seg) {
+    // Start-end of the segment
+    float start_time_seg = seg.first.first;
+    float end_time_seg = seg.second.first;
+    return query_time >= start_time_seg && query_time <= end_time_seg;
+  };
+
+  auto segment_cur = std::find_if(item.trajectory.begin(),
+                                  item.trajectory.end(),
+                                  match_seg);
+
+  // Check the current time along the trajectory:
+  item.current_time = query_time - segment_cur->first.first;
+
+  // Calculate position
+  const glm::vec3 start_position = glm::vec3(segment_cur->first.second[3]);
+  const glm::vec3 end_position = glm::vec3(segment_cur->second.second[3]);
+  float total_distance = glm::distance(end_position, start_position);
+
+  const glm::vec3 direction = (end_position - start_position) / total_distance;
+  const glm::vec3 interp_position = start_position +
+      item.current_time * item.speed * direction;
+  glm::mat4 item_pose = segment_cur->first.second;
+  // Overwrite translational part (1 is needed to keep the homogeneous
+  // matrix format)
+  item_pose[3] = glm::vec4(interp_position, 1);
+  return item_pose;
+}
+
+void vrglasses_for_robots::VulkanRenderer::createModelRepetitions(
+    const SceneItem item_to_repeat, const size_t repetitions) {
+
+  // Time spacing between models
+  float max_time_total = item_to_repeat.trajectory.back().second.first;
+  float dt = max_time_total / static_cast<float>(repetitions);
+
+  for (size_t r = 1; r < repetitions; ++r) {
+    // This the trajectory of the repeated item
+    Trajectory trajectory;
+
+    // Timings along trajectory
+    float trail_time = 0; //< Time along the current path
+    float global_time = dt * r; //< Global time to get the starting position
+
+    // Find the segment where we start with the repeated model
+    float query_time = std::fmod(global_time, max_time_total);
+
+    auto match_seg = [&query_time](const Segment& seg) {
+      // Start-end of the segment
+      float start_time_seg = seg.first.first;
+      float end_time_seg = seg.second.first;
+      return query_time >= start_time_seg && query_time <= end_time_seg;
+    };
+    auto semgment_start = std::find_if(item_to_repeat.trajectory.begin(),
+                                    item_to_repeat.trajectory.end(),
+                                    match_seg);
+    if (semgment_start == item_to_repeat.trajectory.end()) {
+      std::cout << "Cannot repeat amodel with starting time " << query_time
+                << "s" << std::endl;
+      continue;
+    }
+
+    // Compute the starting position along the starting segment
+    float path_time = query_time - semgment_start->first.first;
+    const glm::vec3 start_position = glm::vec3(semgment_start->first.second[3]);
+    const glm::vec3 end_position = glm::vec3(semgment_start->second.second[3]);
+    float total_distance = glm::distance(end_position, start_position);
+
+    const glm::vec3 direction = (end_position - start_position) / total_distance;
+    const glm::vec3 interp_position = start_position +
+        path_time * item_to_repeat.speed * direction;
+    glm::mat4 start_pose = semgment_start->first.second;
+    start_pose[3] = glm::vec4(interp_position, 1);
+
+    // This is the index of the starting segment
+    size_t start_segment_idx = std::distance(item_to_repeat.trajectory.begin(),
+                                             semgment_start);
+
+    // Generate the trajectory for the repeated model
+    // 1. Initial segment (initial pose -> end pose of starting segment)
+    StampedWayPoint start_wp{trail_time, start_pose};
+    total_distance = glm::distance(end_position, glm::vec3(start_pose[3]));
+    trail_time += total_distance/item_to_repeat.speed;
+
+    StampedWayPoint end_wp{trail_time, semgment_start->second.second};
+    Segment start_seg{start_wp, end_wp};
+    trajectory.push_back(start_seg);
+
+    // 2. Add the other segments (with time remapping to accommodate for the
+    // new initial position)
+    size_t idx = start_segment_idx + 1 >= item_to_repeat.trajectory.size() ?
+          0 : start_segment_idx + 1;
+    while (idx != start_segment_idx) {
+      // Start pose
+      glm::mat4 start_pose_seg = trajectory.back().second.second;
+      StampedWayPoint start_curr_wp{trail_time, start_pose_seg};
+
+      // End pose
+      glm::mat4 end_pose = item_to_repeat.trajectory[idx].second.second;
+      float total_distance = glm::distance(
+            glm::vec3(start_pose_seg[3]), glm::vec3(end_pose[3]));
+      trail_time += total_distance / item_to_repeat.speed;
+      StampedWayPoint end_curr_wp{trail_time, end_pose};
+
+      // Generate segment and add it to the new trajectory
+      Segment seg{start_curr_wp, end_curr_wp};
+      trajectory.push_back(seg);
+
+      // Update index - when we hit the end of the current trajectory, we start
+      // from the beginning
+      if (idx + 1 >= item_to_repeat.trajectory.size()) {
+        idx = 0;
+      } else {
+        ++idx;
+      }
+    }
+
+    // This is needed to consider the last part of the trajectory
+    // (initial position -> newly computed starting position)
+    glm::mat4 last_pose = trajectory.back().second.second;
+    total_distance = glm::distance(
+          glm::vec3(last_pose[3]), glm::vec3(start_pose[3]));
+    trail_time += total_distance / item_to_repeat.speed;
+    StampedWayPoint end_curr_wp{trail_time, start_pose};
+    Segment seg{trajectory.back().second, end_curr_wp};
+    trajectory.push_back(seg);
+
+    // Append items
+    auto last_item = item_to_repeat;
+    last_item.trajectory = trajectory;
+    scene_items_.push_back(last_item);
+  }
+}
+
 bool vrglasses_for_robots::VulkanRenderer::loadScene(
     const std::string &scene_file) {
 
@@ -1696,7 +1807,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
 bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
     const std::string &dynamic_scene_file) {
   // We assume that the input file has the following structure per row:
-  // model_name;speed;x0 y0 z0 rot0; x1 y1 z1 rot1; ....
+  // model_name;speed;repetitons;x0 y0 z0 rot0; x1 y1 z1 rot1; ....
   //
   // If a model is static (ie. velocity is 0), then the we set the static pose
   // to be the same as the starting pose
@@ -1716,6 +1827,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
         scene_items_.push_back(SceneItem());
         scene_items_.back().model_name = strs[0];
         scene_items_.back().speed = std::stof(strs[1]);
+        size_t repetitions = std::stoi(strs[2]);
 
         if (std::fabs(scene_items_.back().speed) > 1e-4f) {
           // Dynamic model
@@ -1723,7 +1835,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
           // Iterate over the segments (skip first 2 because they are the model
           // name and the speed)
           float cumulative_time = 0.f;
-          for(size_t i = 2; i < strs.size() - 1; ++i) {
+          for(size_t i = 3; i < strs.size() - 1; ++i) {
             glm::mat4 start_pose_wp = parsePose(strs[i]);
             glm::mat4 end_pose_wp = parsePose(strs[i+1]);
 
@@ -1739,22 +1851,13 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
             scene_items_.back().trajectory.push_back({start_stamped_wp,
                                                       end_stamped_wp});
           }
+          // Current time along the trajectory
+          scene_items_.back().current_time = 0.f;
 
-          // Debug - print segments
-          /*
-          std::cout << "MODEL: " << scene_items_.back().model_name << std::endl;
-          size_t counter = 0;
-          for (const auto &segment : scene_items_.back().trajectory) {
-            std::cout << "Segment " << counter++ << ": " << std::endl;
-            std::cout << "\tTime: "
-                      << segment.first.first << " --> " << segment.second.first
-                      << std::endl;
-            std::cout << "\tPosition: "
-                      << glm::to_string(segment.first.second[3])
-                      << " --> " << glm::to_string(segment.second.second[3])
-                      << std::endl;
+          // Check if we need to repeat the model multiple times
+          if (repetitions > 0) {
+            createModelRepetitions(scene_items_.back(), repetitions);
           }
-          */
         } else {
           // Static model
           std::vector<std::string> static_pose_str;
@@ -1766,11 +1869,27 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
           static_pose *= glm::eulerAngleZ((float)glm::radians(std::stod(static_pose_str[0])));
 
           scene_items_.back().static_pose = static_pose;
+          scene_items_.back().current_time = 0.f;
         }
-
-        // Now generate the trajectory for the model
-        scene_items_.back().current_time = 0.f;
       }
+
+      // Debug - print segments
+      /*
+      for (const auto& item : scene_items_) {
+        std::cout << "\nMODEL: " << item.model_name << std::endl;
+        size_t counter = 0;
+        for (const auto &segment : item.trajectory) {
+          std::cout << "Segment " << counter++ << ": " << std::endl;
+          std::cout << "\tTime: "
+                    << segment.first.first << " --> " << segment.second.first
+                    << std::endl;
+          std::cout << "\tPosition: "
+                    << glm::to_string(segment.first.second[3])
+                    << " --> " << glm::to_string(segment.second.second[3])
+                    << std::endl;
+        }
+      }
+      */
     } else {
       throw std::invalid_argument("scene file could be opened");
     }

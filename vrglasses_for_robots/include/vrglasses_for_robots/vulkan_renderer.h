@@ -276,6 +276,11 @@ public:
   void setCamera(glm::mat4 mvp);
 
   //
+  glm::mat4 getPoseAlongPath(SceneItem &item, const float time);
+
+  void createModelRepetitions(const SceneItem repeated_item,
+                              const size_t repetitions);
+
   bool loadMeshs(const std::string &model_folder, const std::string &model_list);
 
   bool loadMesh(const std::string &filename_model_obj, const std::string &filename_model_tex);
