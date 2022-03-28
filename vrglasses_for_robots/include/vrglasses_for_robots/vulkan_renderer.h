@@ -296,6 +296,8 @@ public:
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map,
                   const float &time=0.f);
 
+  bool collisionAgainstMovingObjs(const glm::mat4& mvp, const float time);
+
   void cleanUp();
   
   void clearModels();

@@ -1336,6 +1336,25 @@ void vrglasses_for_robots::VulkanRenderer::renderMesh(
   // releaseMeshDataBuffers();
 }
 
+bool vrglasses_for_robots::VulkanRenderer::collisionAgainstMovingObjs(
+    const glm::mat4& mvp, const float time) {
+  glm::vec3 current_position(mvp[3]);
+  const float min_dist = 3.f;
+
+  for(auto& item : scene_items_) {
+    // Skip static models
+    if (item.speed < 1e-4f) {
+      continue;
+    }
+
+    glm::vec3 item_position(getPoseAlongPath(item, time)[3]);
+    if (glm::distance(item_position, current_position) <= min_dist) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void vrglasses_for_robots::VulkanRenderer::cleanUp() {
   vkDestroyBuffer(device, vertexBuffer, nullptr);
   vkFreeMemory(device, vertexMemory, nullptr);
