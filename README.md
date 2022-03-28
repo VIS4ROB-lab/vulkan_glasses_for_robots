@@ -55,5 +55,7 @@ where the file are as follows (**per row**, respect white spaces!):
 * `model_list_file`: model_name;relative/path/to/model.obj;/relative/path/to/model/texture.png
 * `dynamic_model_pose_file`: 
 	* Static models: `model_name;0;yaw x y z`
-	* Dynamic models: `model_name;velocity;yaw0 x0 y0 z0;yaw1 x1 y1 z1;...`
+	* Dynamic models: `model_name;velocity;num_repetitions;yaw0 x0 y0 z0;yaw1 x1 y1 z1;...`
+	
+For the dynamic models, the single model is repeated `num_repetitions` times along the trajectory (models are equally spaced along path).
 
