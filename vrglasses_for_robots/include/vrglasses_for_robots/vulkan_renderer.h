@@ -111,6 +111,7 @@ typedef std::pair<StampedWayPoint, StampedWayPoint> Segment;
 typedef std::vector<Segment> Trajectory;
 struct SceneItem{
   std::string model_name;
+  bool chasing;
   glm::mat4 static_pose;
   Trajectory trajectory; //< In global frame (world to model)
 
@@ -219,7 +220,8 @@ class VulkanRenderer {
 
   void buildRenderPass(uint32_t width, uint32_t height);
 
-  void drawTriangles(uint32_t width, uint32_t height, const float &time=0.f);
+  void drawTriangles(uint32_t width, uint32_t height, const float &time=0.f,
+                     const std::vector<float>& t_chase={0,0});
 
   void saveImageDepthmap(
       uint32_t width, uint32_t height, cv::Mat& result_depth_map,
@@ -294,7 +296,8 @@ public:
   void copyVertex();
 
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map,
-                  const float &time=0.f);
+                  const float &time=0.f,
+                  const std::vector<float> &t_chase={0,0});
 
   bool collisionAgainstMovingObjs(const glm::mat4& mvp, const float time);
 

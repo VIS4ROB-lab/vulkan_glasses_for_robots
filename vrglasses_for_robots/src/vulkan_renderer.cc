@@ -531,7 +531,10 @@ void vrglasses_for_robots::VulkanRenderer::buildRenderPass(uint32_t width,
 
 void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
                                                          uint32_t height,
-                                                         const float &time) {
+                                                         const float &time,
+                                                         const std::vector<float>& t_chase) {
+  assert(t_chase.size() == 2);
+
   /*
           Command buffer creation
   */
@@ -584,16 +587,27 @@ void vrglasses_for_robots::VulkanRenderer::drawTriangles(uint32_t width,
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer, offsets);
     vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
+    // Get the transformation when objects are chasing the camera (x-y plane)
+    glm::mat4 T_chase(1.0);
+    T_chase[3] = glm::vec4(t_chase[0], t_chase[1], 0, 1);
 
     for (size_t idx = 0; idx < scene_items_.size(); idx++) {
 
       // Find pose at given time
       glm::mat4 item_pose;
       if (!scene_items_[idx].trajectory.empty()) {
-        item_pose = getPoseAlongPath(scene_items_[idx], time);
+        if (scene_items_[idx].chasing) {
+          item_pose = T_chase * getPoseAlongPath(scene_items_[idx], time);
+        } else {
+          item_pose = getPoseAlongPath(scene_items_[idx], time);
+        }
       } else {
         // In this case we have only a static pose
-        item_pose = scene_items_[idx].static_pose;
+        if (scene_items_[idx].chasing) {
+          item_pose = T_chase * scene_items_[idx].static_pose;
+        } else {
+          item_pose = scene_items_[idx].static_pose;
+        }
       }
 
       glm::mat4 mvp_cv = vp_cv_ * item_pose;
@@ -1325,9 +1339,9 @@ void vrglasses_for_robots::VulkanRenderer::setCamera(glm::mat4 mvp) {
 
 void vrglasses_for_robots::VulkanRenderer::renderMesh(
     cv::Mat &result_depth_map, cv::Mat &result_attribute_map,
-    const float &time) {
+    const float &time, const std::vector<float>& t_chase) {
 
-  drawTriangles(width_, height_, time);
+  drawTriangles(width_, height_, time, t_chase);
 
   saveImageDepthmap(width_, height_, result_depth_map, result_attribute_map);
   // sparseTest(landmarks_3d, result_depth_map);
@@ -1826,7 +1840,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadScene(
 bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
     const std::string &dynamic_scene_file) {
   // We assume that the input file has the following structure per row:
-  // model_name;speed;repetitons;x0 y0 z0 rot0; x1 y1 z1 rot1; ....
+  // model_name;chasing;speed;repetitons;x0 y0 z0 rot0; x1 y1 z1 rot1; ....
   //
   // If a model is static (ie. velocity is 0), then the we set the static pose
   // to be the same as the starting pose
@@ -1845,8 +1859,9 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
         boost::split(strs, line, boost::is_any_of(";"));
         scene_items_.push_back(SceneItem());
         scene_items_.back().model_name = strs[0];
-        scene_items_.back().speed = std::stof(strs[1]);
-        size_t repetitions = std::stoi(strs[2]);
+        scene_items_.back().chasing = strs[1] == "1";
+        scene_items_.back().speed = std::stof(strs[2]);
+        size_t repetitions = std::stoi(strs[3]);
 
         if (std::fabs(scene_items_.back().speed) > 1e-4f) {
           // Dynamic model
@@ -1854,7 +1869,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
           // Iterate over the segments (skip first 2 because they are the model
           // name and the speed)
           float cumulative_time = 0.f;
-          for(size_t i = 3; i < strs.size() - 1; ++i) {
+          for(size_t i = 4; i < strs.size() - 1; ++i) {
             glm::mat4 start_pose_wp = parsePose(strs[i]);
             glm::mat4 end_pose_wp = parsePose(strs[i+1]);
 
@@ -1879,15 +1894,7 @@ bool vrglasses_for_robots::VulkanRenderer::loadDynamicScene(
           }
         } else {
           // Static model
-          std::vector<std::string> static_pose_str;
-          boost::split(static_pose_str, strs[2], boost::is_any_of(" "));
-          glm::mat4 static_pose = glm::translate(
-              glm::mat4(1.0),
-              glm::vec3(std::stod(static_pose_str[1]),
-                std::stod(static_pose_str[2]), std::stod(static_pose_str[3])));
-          static_pose *= glm::eulerAngleZ((float)glm::radians(std::stod(static_pose_str[0])));
-
-          scene_items_.back().static_pose = static_pose;
+          scene_items_.back().static_pose = parsePose(strs[3]);
           scene_items_.back().current_time = 0.f;
         }
       }
