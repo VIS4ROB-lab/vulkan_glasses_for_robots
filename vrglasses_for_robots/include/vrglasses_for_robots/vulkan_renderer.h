@@ -13,6 +13,8 @@
 #include <glog/logging.h>
 #include <opencv2/core.hpp>
 #include <Eigen/Core>
+#include <map>
+#include <vector>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -91,7 +93,35 @@ namespace std {
 
 namespace vrglasses_for_robots {
 
+struct ThreeDModel{
+  std::string name;
+  std::string obj_file;
+  std::string texture_file;
+  long unsigned int begin_vertex_index;
+  long unsigned int begin_vertex_count;
+  size_t material_index;
 
+  ThreeDModel():name("none"),obj_file("none"),texture_file("none"),begin_vertex_index(0),begin_vertex_count(0),material_index(9999){
+
+  }
+};
+
+struct SceneItem{
+  std::string model_name;
+  glm::mat4 T_World2Model;
+  SceneItem():model_name("none"){
+    T_World2Model = glm::mat4(1.0);
+  }
+};
+
+struct Texture2D{
+  VkImage textureImage;
+  VkDeviceMemory textureImageMemory;
+  VkImageView textureImageView;
+  VkSampler textureSampler;
+
+  VkDescriptorSet descriptorSet;
+};
 
 class VulkanRenderer {
  private:
@@ -117,16 +147,12 @@ class VulkanRenderer {
   VkBuffer image_buffer;
   VkDeviceMemory image_buffer_memory;
 
-  VkImage textureImage;
-  VkDeviceMemory textureImageMemory;
-  VkImageView textureImageView;
-  VkSampler textureSampler;
-
   VkDescriptorPool descriptorPool;
-  VkDescriptorSet descriptorSet;
+
+
 
   uint32_t width_, height_;
-  std::string filename_texture_;
+
   std::string shader_vert_spv_;
   std::string shader_frag_spv_;
   float far_, near_;
@@ -150,9 +176,15 @@ class VulkanRenderer {
 
   std::vector<Vertex> vertices_;
   std::vector<uint32_t> indices_;
-  size_t max_landmark_count_, max_indice_count_;
+  //size_t max_landmark_count_, max_indice_count_;
+  std::vector<ThreeDModel> models_;
+  std::map<std::string,size_t> models_index_;
+  std::vector<SceneItem> scene_items_;
 
-  glm::mat4 mvp_cv_, projection_cv_;
+  std::vector<Texture2D> textures_;
+
+
+  glm::mat4 vp_cv_, projection_cv_;
 
   VkFramebuffer framebuffer;
   FrameBufferAttachment colorAttachment, depthAttachment;
@@ -209,9 +241,9 @@ class VulkanRenderer {
 
   float convertZbufferToDepth(float near, float far, float zValue);
 
-  void createTextureImage();
-  void createTextureImageView();
-  void createTextureSampler();
+  void createTextureImage(Texture2D &tex, std::string filename_texture);
+  void setupDescriptorSet(Texture2D &tex);
+
   void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
   uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
   void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &imageMemory);
@@ -219,27 +251,39 @@ class VulkanRenderer {
   VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
   void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
   void setupDescriptorPool();
-  void setupDescriptorSet();
+
 public:
+
   VulkanRenderer(
-      uint32_t width, uint32_t height, float near, float far,
-      const std::string& shader_vert_spv =
-          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
-          "vrglasses_for_robots/shaders/vrglasses4robots_shader.vert.spv",
-      const std::string& shader_frag_spv =
-          "/media/secssd/catkin_ws/src/vrglasses_for_robots/"
-          "vrglasses_for_robots/shaders/vrglasses4robots_shader.frag.spv",
-      size_t max_landmark_count = 1000, size_t max_indice_count = 3000);
+      uint32_t width,
+      uint32_t height,
+      float near,
+      float far,
+      const std::string& shader_spv_folder
+      );
 
   void setCamera(
       float p_focal_u, float p_focal_v, float p_center_u, float p_center_v);
   void setCamera(glm::mat4 mvp);
 
-  void loadMesh(const std::string &filename_model_obj, const std::string &filename_texture);
+  //
+  bool loadMeshs(const std::string &model_folder, const std::string &model_list);
+
+  bool loadMesh(const std::string &filename_model_obj, const std::string &filename_model_tex);
+
+  void noFileScene();
+
+  bool loadScene(const std::string &scene_file);
+
+  void copyVertex();
 
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map);
 
   ~VulkanRenderer();
+
+  //void loadMeshs(const std::string &filename_model_obj);
+  //bool loadVertex(const std::string &filename_model_obj);
+  bool loadVertex(const size_t model_idx);
 
 };
 }

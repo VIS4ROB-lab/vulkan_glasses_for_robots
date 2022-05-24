@@ -1,0 +1,3 @@
+library;oakland_library_semantics/oakland-nj-public-library_v1.r2.obj;oakland_library_semantics/oakland_library_texture8k_roof_rgbs.tga
+stadium;baseball_stadium/baseball_stadium.obj;baseball_stadium/regency_ii_texture.tga
+
