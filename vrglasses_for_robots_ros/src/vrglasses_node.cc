@@ -24,7 +24,8 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
 
     int ncameras;
     if(!nh_private_.getParam("ncameras", ncameras)) {
-        ROS_WARN("ncameras not specified, using default (mono)");
+        ROS_WARN("ncameras not specified, using default (1 camera)");
+        ncameras = 1;
     } else {
       if (ncameras <= 0) {
         ROS_ERROR("Invalid camera configuration specified! Abort.");
