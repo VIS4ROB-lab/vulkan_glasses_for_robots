@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="file_obj"/>
+  <arg name="file_texture"/>
+  <arg name="mav_name"/>
+
+  <arg name="vi_sensor" default="$(arg mav_name)/vi_sensor"/>
+
+  <group ns="$(arg mav_name)">
+    <node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
+      <remap from="odometry"         to="vi_sensor/ground_truth/odometry" />
+
+      <param name="framerate"         value="20.0" />
+      
+      <param name="ncameras"          value="3"/>
+      <param name="body_frame"        value="/$(arg mav_name)/vi_sensor/base_link"/>
+      
+      <!-- Camera 0 -->
+      <param name="camera_0/pitch"    value="0.0"/> <!-- rad -->
+      <param name="camera_0/yaw"      value="0.0"/> <!-- rad -->
+      <param name="camera_0/p_x"      value="0.015"/>
+      <param name="camera_0/p_y"      value="0.055"/>
+      <param name="camera_0/p_z"      value="0.0065"/>
+      <param name="camera_0/camera_frame_id" value="$(arg vi_sensor)/camera_0_optical_link" />
+      
+      <!-- Camera 1 -->
+      <param name="camera_1/pitch"    value="0.0"/> <!-- rad -->
+      <param name="camera_1/yaw"      value="0.0"/> <!-- rad -->
+      <param name="camera_1/p_x"      value="0.015"/>
+      <param name="camera_1/p_y"      value="-0.055"/>
+      <param name="camera_1/p_z"      value="0.0065"/>
+      <param name="camera_1/camera_frame_id" value="$(arg vi_sensor)/camera_1_optical_link" />
+      
+      <!-- Camera 2 -->
+      <param name="camera_2/pitch"    value="0.0"/> <!-- rad -->
+      <param name="camera_2/yaw"      value="3.1415"/> <!-- rad -->
+      <param name="camera_2/p_x"      value="0.0"/>
+      <param name="camera_2/p_y"      value="0.0"/>
+      <param name="camera_2/p_z"      value="0.0"/>
+      <param name="camera_2/camera_frame_id" value="$(arg vi_sensor)/camera_2_optical_link" />
+      
+      <param name="mesh_obj_file"     value="$(arg file_obj)" />
+      <param name="texture_file"      value="$(arg file_texture)" />
+      <param name="shader_folder"     value="$(find vrglasses_for_robots)/shaders" />
+      <param name="render_far"        value="100.0" /><!-- the range between near and far should be as small as possible, this affects the accuracy of the render depth map-->
+      <param name="render_near"       value="0.1" />
+    </node>
+    
+  </group>
+</launch>
