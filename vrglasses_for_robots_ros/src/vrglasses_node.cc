@@ -11,7 +11,7 @@
 VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private): nh_(nh), nh_private_(nh_private),
     image_transport_(nh_private_), initialized_(false) {
     renderer_ = nullptr;
-    odom_sub_ = nh_.subscribe("odometry", 500, &VRGlassesNode::odomCallback, this);
+    odom_sub_ = nh_.subscribe("odometry", 1, &VRGlassesNode::odomCallback, this);
 
     // Parameters
     double framerate;
@@ -117,6 +117,7 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
       depth_pub_.push_back(image_transport_.advertise("depth_map_" + std::to_string(i), 1));
       semantic_pub_.push_back(image_transport_.advertise("semantic_map_" + std::to_string(i), 1));
       cameras_odom_pub_.push_back(nh_private_.advertise<nav_msgs::Odometry>("camera_odometry_out_" + std::to_string(i), 50));
+      cameras_pose_pub_.push_back(nh_private_.advertise<geometry_msgs::PoseStamped>("camera_pose_out_" + std::to_string(i), 50));
 
       // Output from renderer
       result_depth_map_.push_back(cv::Mat());
@@ -264,6 +265,12 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
           nav_msgs::Odometry odom_msg = msg;
           tf::poseKindrToMsg(T_WC_left,&(odom_msg.pose.pose));
           cameras_odom_pub_[i].publish(odom_msg);
+
+          // Camera pose
+          geometry_msgs::PoseStamped pose_msg;
+          pose_msg.header = msg.header;
+          tf::poseKindrToMsg(T_WC_left, &pose_msg.pose);
+          cameras_pose_pub_[i].publish(pose_msg);
 
           // Publish TF
           tf_cameras_[i].stamp_ = ros::Time::now();

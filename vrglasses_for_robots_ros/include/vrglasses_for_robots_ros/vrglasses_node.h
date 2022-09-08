@@ -38,6 +38,7 @@ private:
 
     ::ros::Subscriber odom_sub_; //usually imu (sensor S) pose of visim (T_WS)
     std::vector<::ros::Publisher> cameras_odom_pub_; // camera in the model world frame (T_WC)
+    std::vector<::ros::Publisher> cameras_pose_pub_; // camera in the model world frame (T_WC)
 
     std::vector<image_transport::CameraPublisher> cams_pub_;
     std::vector<image_transport::Publisher> semantic_pub_;
