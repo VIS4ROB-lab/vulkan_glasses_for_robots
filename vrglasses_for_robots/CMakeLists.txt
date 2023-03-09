@@ -17,8 +17,8 @@ include_directories( ${TINYOBJLOADER_INCLUDE_DIRS} )
 include_directories( include )
 
 #hack to add headers in the qtcreator
-FILE(GLOB_RECURSE hearderFiles "include/vrglasses_for_robots/*.h")
-add_custom_target(headers SOURCES ${hearderFiles})
+# FILE(GLOB_RECURSE hearderFiles "include/vrglasses_for_robots/*.h")
+#add_custom_target(headers SOURCES ${hearderFiles})
 
 add_custom_target(
     vrglasses4robots_shader.frag.spv
