@@ -279,6 +279,12 @@ public:
 
   void renderMesh(cv::Mat& result_depth_map, cv::Mat& result_attribute_map);
 
+  static void buildOrthographicProjection(glm::mat4 &orthographic_projection_matrix,
+                                          int width, int height, float near, float far);
+
+  static void buildOrthographicProjection(
+      glm::mat4& matProjection, float left, float right, float bottom, float top, float near, float far);
+
   ~VulkanRenderer();
 
   //void loadMeshs(const std::string &filename_model_obj);

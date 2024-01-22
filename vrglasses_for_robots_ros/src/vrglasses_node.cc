@@ -9,7 +9,8 @@
 #include <minkindr_conversions/kindr_msg.h>
 
 
-
+#define FLAGS_ortho true
+#define FLAGS_ortho_width 2
 
 
 VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private): nh_(nh), nh_private_(nh_private),
@@ -69,6 +70,18 @@ void VRGlassesNode::run()
     buildOpenglProjectionFromIntrinsics(perpective_, empty, 
             visim_project_.w, visim_project_.h, visim_project_.f,
             visim_project_.f, 0, visim_project_.cx, visim_project_.cy, near_, far_);
+
+    if(FLAGS_ortho)
+    {
+        if(FLAGS_ortho_width != 0)
+        {
+            renderer_->buildOrthographicProjection(projection_matrix_,FLAGS_ortho_width,FLAGS_ortho_width*(h_/(float)w_),FLAGS_near,FLAGS_far);
+        }
+    }
+    else
+    {
+        renderer_->buildPerpectiveProjection(projection_matrix_,w_,h_,fx_,fy_,0,cx_,cy_,FLAGS_near,FLAGS_far);
+    }
 
     std::string mesh_obj_file;
     std::string texture_file;
