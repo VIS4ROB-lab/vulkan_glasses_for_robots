@@ -154,7 +154,14 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
   std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
   VK_CHECK_RESULT(vkEnumeratePhysicalDevices(instance, &deviceCount,
                                              physicalDevices.data()));
-  physicalDevice = physicalDevices[0];
+  
+  
+  // LARS trying to use Vulkan on performance gpu (nvidia)
+  
+  // physicalDevice = physicalDevices[0];
+  physicalDevice = physicalDevices[1];
+
+
 
   VkPhysicalDeviceProperties deviceProperties;
   vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
