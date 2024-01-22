@@ -10,7 +10,7 @@
 
 
 #define FLAGS_ortho true
-#define FLAGS_ortho_width 1.0
+#define FLAGS_ortho_width 1
 
 
 VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &nh_private): nh_(nh), nh_private_(nh_private),
@@ -76,13 +76,15 @@ void VRGlassesNode::run()
     double ortho_width;
     nh_private_.getParam("ortho_width", ortho_width);
 
+    std::cout << "Orthographic view width: " << ortho_width << std::endl;
+
     if(FLAGS_ortho)
     {
-        if(FLAGS_ortho_width != 0)
+        if(ortho_width != 0)
         {
             buildOrthographicProjection(perpective_, 
                                         ortho_width, 
-                                        FLAGS_ortho_width*(visim_project_.h/(float)visim_project_.w), 
+                                        ortho_width*(visim_project_.h/(float)visim_project_.w), 
                                         near_, 
                                         far_);
         }
@@ -329,7 +331,7 @@ void VRGlassesNode::buildOrthographicProjection(
     float bottom   = -1.0 * std::floor(height/2.0);
     float top  = height - std::floor(-height/2.0);
 
-    buildOrthographicProjection(orthographic_projection_matrix,left, right, bottom, top, near, far);
+    buildOrthographicProjection(orthographic_projection_matrix, left, right, bottom, top, near, far);
 }
 
 

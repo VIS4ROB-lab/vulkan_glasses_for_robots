@@ -158,8 +158,8 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
   
   // LARS trying to use Vulkan on performance gpu (nvidia)
   
-  // physicalDevice = physicalDevices[0];
-  physicalDevice = physicalDevices[1];
+  // physicalDevice = physicalDevices[0]; // Intel
+  physicalDevice = physicalDevices[1]; // Nvidia
 
 
 
