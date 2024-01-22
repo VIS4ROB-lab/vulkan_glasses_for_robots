@@ -1293,32 +1293,6 @@ void vrglasses_for_robots::VulkanRenderer::buildOpenglProjectionFromIntrinsics(
 }
 
 
-void vrglasses_for_robots::VulkanRenderer::buildOrthographicProjection(
-    glm::mat4 & orthographic_projection_matrix, int width, int height, float near, float far) {
-    std::cout << "Ortho Img Callback" << std::endl;
-
-    float left   = -1.0 * std::floor(width/2.0);
-    float right  = width - std::floor(-width/2.0);
-
-    float bottom   = -1.0 * std::floor(height/2.0);
-    float top  = height - std::floor(-height/2.0);
-
-    buildOrthographicProjection(orthographic_projection_matrix,left, right, bottom, top, near, far);
-}
-
-void vrglasses_for_robots::VulkanRenderer::buildOrthographicProjection(
-    glm::mat4 & orthographic_projection_matrix, float left, float right, float bottom, float top, float near, float far) {
-
-    glm::mat4 ortho;
-    ortho = glm::ortho(left, right, bottom, top, near, far);
-
-    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
-                         0.0f, -1.0f, 0.0f, 0.0f,
-                         0.0f,  0.0f, 0.5f, 0.0f,
-                         0.0f,  0.0f, 0.5f, 1.0f);
-
-    orthographic_projection_matrix = clip * ortho;
-}
 
 
 void vrglasses_for_robots::VulkanRenderer::setCamera(float p_focal_u,

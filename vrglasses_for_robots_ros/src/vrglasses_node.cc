@@ -67,20 +67,22 @@ void VRGlassesNode::run()
     renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
           visim_project_.h, near_, far_, shader_folder);
     glm::mat4 empty;
+    /* LARS: perspective camera, we want orthographic
     buildOpenglProjectionFromIntrinsics(perpective_, empty, 
             visim_project_.w, visim_project_.h, visim_project_.f,
             visim_project_.f, 0, visim_project_.cx, visim_project_.cy, near_, far_);
-
+    */
+   
     if(FLAGS_ortho)
     {
         if(FLAGS_ortho_width != 0)
         {
-            renderer_->buildOrthographicProjection(projection_matrix_,FLAGS_ortho_width,FLAGS_ortho_width*(h_/(float)w_),FLAGS_near,FLAGS_far);
+            buildOrthographicProjection(perpective_, 
+                                        FLAGS_ortho_width, 
+                                        FLAGS_ortho_width*(visim_project_.h/(float)visim_project_.w), 
+                                        near_, 
+                                        far_);
         }
-    }
-    else
-    {
-        renderer_->buildPerpectiveProjection(projection_matrix_,w_,h_,fx_,fy_,0,cx_,cy_,FLAGS_near,FLAGS_far);
     }
 
     std::string mesh_obj_file;
@@ -310,4 +312,35 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
     // matrix
     matPerspective = ndc * matProjection;
     matPerspective[1][1] *= -1; //was originally designed for OpenGL, where the Y coordinate of the clip coordinates is inverted in relation Vulkan.
+}
+
+
+
+void VRGlassesNode::buildOrthographicProjection(
+    glm::mat4 & orthographic_projection_matrix, int width, int height, float near, float far) {
+    std::cout << "Ortho Img Callback" << std::endl;
+
+    float left   = -1.0 * std::floor(width/2.0);
+    float right  = width - std::floor(-width/2.0);
+
+    float bottom   = -1.0 * std::floor(height/2.0);
+    float top  = height - std::floor(-height/2.0);
+
+    buildOrthographicProjection(orthographic_projection_matrix,left, right, bottom, top, near, far);
+}
+
+
+
+void VRGlassesNode::buildOrthographicProjection(
+    glm::mat4 & orthographic_projection_matrix, float left, float right, float bottom, float top, float near, float far) {
+
+    glm::mat4 ortho;
+    ortho = glm::ortho(left, right, bottom, top, near, far);
+
+    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
+                         0.0f, -1.0f, 0.0f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 0.0f,
+                         0.0f,  0.0f, 0.5f, 1.0f);
+
+    orthographic_projection_matrix = clip * ortho;
 }
