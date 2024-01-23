@@ -35,14 +35,14 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     double framerate;
     if (!nh_private_.getParam("framerate", framerate)) {
       framerate = 20;
-      ROS_WARN("framerate parameter not found, using default(20)");
+      ROS_WARN("framerate parameter not found, using default (20)");
     }
     diff_frames_.fromSec(1.0 / framerate);
     last_frame_time_ = ros::Time(0);
 
     if (!nh_private_.getParam("camera_frame_id", camera_frame_id_)) {
       camera_frame_id_ = "world";
-      ROS_WARN("camera_frame_id parameter not found, using default('world')");
+      ROS_WARN("camera_frame_id parameter not found, using default ('world')");
     }
 
     // Initialization is fine
@@ -82,6 +82,9 @@ void VRGlassesNode::run()
     {
         if(ortho_width != 0)
         {
+            std::cout << "Rendered image height: " << visim_project_.h << std::endl;
+            std::cout << "Rendered image width: " << visim_project_.w << std::endl;
+            
             buildOrthographicProjection(perpective_, 
                                         ortho_width, 
                                         ortho_width*(visim_project_.h/(float)visim_project_.w), 
@@ -353,6 +356,7 @@ void VRGlassesNode::buildOrthographicProjection(
 
     glm::mat4 ortho;
     ortho = glm::ortho(left, right, bottom, top, near, far);
+    // ortho = glm::ortho(left, right, bottom, top);
 
     const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
                          0.0f, -1.0f, 0.0f, 0.0f,

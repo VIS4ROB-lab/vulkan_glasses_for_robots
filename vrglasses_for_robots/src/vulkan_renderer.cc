@@ -1215,6 +1215,15 @@ vrglasses_for_robots::VulkanRenderer::VulkanRenderer(
     : width_(width), height_(height), far_(far), near_(near) {
   std::cout << "Running headless rendering example\n";
 
+  // Lars debugging stuff
+  std::cout << "-------------------------------------------------------------" << std::endl;
+  std::cout << "vrglasses_for_robots::VulkanRenderer::VulkanRenderer Settings: " << std::endl;
+  std::cout << "width: " << width << std::endl;
+  std::cout << "height: " << height << std::endl;
+  std::cout << "near: " << near << std::endl;
+  std::cout << "far: " << far << std::endl;
+  std::cout << "-------------------------------------------------------------" << std::endl;
+
   boost::filesystem::path shader_folder =
       boost::filesystem::path(shader_spv_folder);
   shader_vert_spv_ =
