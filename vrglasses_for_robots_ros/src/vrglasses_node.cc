@@ -322,14 +322,26 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
 
 
 void VRGlassesNode::buildOrthographicProjection(
-    glm::mat4 & orthographic_projection_matrix, int width, int height, float near, float far) {
+    glm::mat4 & orthographic_projection_matrix, float width, float height, float near, float far) {
     std::cout << "Ortho Img Callback" << std::endl;
 
-    float left   = -1.0 * std::floor(width/2.0);
-    float right  = width - std::floor(-width/2.0);
+    // Old was of doing things
+    // float left   = -1.0 * std::floor(width/2.0);
+    // float right  = width - std::floor(-width/2.0);
 
-    float bottom   = -1.0 * std::floor(height/2.0);
-    float top  = height - std::floor(-height/2.0);
+    // float bottom   = -1.0 * std::floor(height/2.0);
+    // float top  = height - std::floor(-height/2.0);
+
+    float left = -1.0 * width/2.0;
+    float right = width/2.0;
+
+    float bottom = -1.0 * height/2.0;
+    float top = height/2.0;
+
+    std::cout << "Left: " << left << std::endl;
+    std::cout << "Right: " << right << std::endl;
+    std::cout << "Bottom: " << bottom << std::endl;
+    std::cout << "Top: " << top << std::endl;
 
     buildOrthographicProjection(orthographic_projection_matrix, left, right, bottom, top, near, far);
 }

@@ -30,7 +30,7 @@ public:
 
     // LARS: added these since we defined them in vrglasses_node.cc
     static void buildOrthographicProjection(glm::mat4 &orthographic_projection_matrix,
-                                          int width, int height, float near, float far);
+                                          float width, float height, float near, float far);
 
     static void buildOrthographicProjection(
       glm::mat4& matProjection, float left, float right, float bottom, float top, float near, float far);
