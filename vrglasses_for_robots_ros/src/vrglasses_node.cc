@@ -348,7 +348,7 @@ void VRGlassesNode::buildOrthographicProjection(
     std::cout << "Top: " << top << std::endl;
     std::cout << "Near: " << near << std::endl;
     std::cout << "Far: " << far << std::endl; 
-    
+
 
     buildOrthographicProjection(orthographic_projection_matrix, left, right, bottom, top, near, far);
 }

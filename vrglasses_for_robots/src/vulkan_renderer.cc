@@ -801,6 +801,7 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
       std::cout << "Orthographic Z read out: " << std::endl;
       std::cout << "far_ " << far_ << std::endl;
       std::cout << "near_ " << near_ << std::endl;
+      
 
       // TODO: 
       // Add 1 to all values of result_depth_map_data: makes values sit between 0,2.
@@ -809,14 +810,20 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
       // Then add near
 
 
+
+
+      result_depth_map = (result_depth_map * (far_ - near_)) + near_; 
+
+      // result_depth_map = (((1 + result_depth_map) / 2.0 ) * (far_ - near_)) + near_; 
       
+      // std::cout << "Before adding 1, dividing by 2 ... result_depth_map:" << std::endl;
+      // std::cout << result_depth_map << std::endl;
 
-
-      result_depth_map.convertTo(result_depth_map, CV_32F,
-                                 static_cast<double>( (far_ - near_)),
-                                 static_cast<double>(far_ + near_));
+      // result_depth_map.convertTo(result_depth_map, CV_32F,
+      //                            static_cast<double>( (far_ - near_)),
+      //                            static_cast<double>(far_ + near_));
                                  
-      result_depth_map = (1 + result_depth_map) / 2.0 * (far_ - near_);
+      
     }
     
 
