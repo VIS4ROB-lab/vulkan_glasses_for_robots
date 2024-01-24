@@ -779,21 +779,73 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
       VK_CHECK_RESULT(
           vkMapMemory(device, image_buffer_memory, 0, mem_size, 0, &mapped));
 
-      memcpy(result_depth_map.data, mapped, mem_size);
+      memcpy(result_depth_map.data, mapped, mem_size); // raw information
       vkUnmapMemory(device, image_buffer_memory);
 
-      // 2.0 * near* far / (far + near - zValue * (far - near));
 
-      // result_depth_map.convertTo(result_depth_map, CV_32F, 2, -1);
+
+    if (false) {
+
+      std::cout << "Perspective Z read out: " << std::endl;
+      std::cout << "far_ " << far_ << std::endl;
+      std::cout << "near_ " << near_ << std::endl;
+
       result_depth_map.convertTo(result_depth_map, CV_32F,
                                  -1.0 * static_cast<double>(far_ - near_),
                                  static_cast<double>(far_ + near_));
 
       result_depth_map = (2.0f * far_ * near_) / result_depth_map;
 
+    } else {
+
+      std::cout << "Orthographic Z read out: " << std::endl;
+      std::cout << "far_ " << far_ << std::endl;
+      std::cout << "near_ " << near_ << std::endl;
+
+      // TODO: 
+      // Add 1 to all values of result_depth_map_data: makes values sit between 0,2.
+      // Divide by 2.0 ==> brings everything between 0,1
+      // Then multiply by (far - near).
+      // Then add near
+
+
+      
+
+
+      result_depth_map.convertTo(result_depth_map, CV_32F,
+                                 static_cast<double>( (far_ - near_)),
+                                 static_cast<double>(far_ + near_));
+                                 
+      result_depth_map = (1 + result_depth_map) / 2.0 * (far_ - near_);
+    }
+    
+
+
+    
+      // result_depth_map.convertTo(result_depth_map, CV_32F,
+      //                            -1.0 * static_cast<double>(far_ - near_),
+      //                            static_cast<double>(far_ + near_));
+
+      // result_depth_map = (2.0f * far_ * near_) / result_depth_map;
+
+
+      // result_depth_map.convertTo(result_depth_map, CV_32F,
+      //                            static_cast<double>(far_ - near_),
+      //                            static_cast<double>(near_));
+
+
+      // std::cout << "Z read out: " << std::endl;
+      // std::cout << "far_ " << far_ << std::endl;
+      // std::cout << "near_ " << near_ << std::endl;
+
+
+      // result_depth_map = (2.0f * far_ * near_) / result_depth_map;
+
       // cv::flip(result_depth_map, result_depth_map, 0);
-      cv::threshold(result_depth_map, result_depth_map, far_ - 0.0001, far_,
-                    cv::THRESH_TOZERO_INV);
+
+
+      // cv::threshold(result_depth_map, result_depth_map, far_ - 0.0001, far_,
+      //               cv::THRESH_TOZERO_INV);
     }
     // LOG("Framebuffer image saved to %s\n", filename);
   }
@@ -1220,8 +1272,8 @@ vrglasses_for_robots::VulkanRenderer::VulkanRenderer(
   std::cout << "vrglasses_for_robots::VulkanRenderer::VulkanRenderer Settings: " << std::endl;
   std::cout << "width: " << width << std::endl;
   std::cout << "height: " << height << std::endl;
-  std::cout << "near: " << near << std::endl;
-  std::cout << "far: " << far << std::endl;
+  std::cout << "near: " << near_ << std::endl;
+  std::cout << "far: " << far_ << std::endl;
   std::cout << "-------------------------------------------------------------" << std::endl;
 
   boost::filesystem::path shader_folder =
@@ -1301,6 +1353,12 @@ void vrglasses_for_robots::VulkanRenderer::buildOpenglProjectionFromIntrinsics(
   matCVProjection[3][2] = 0;
   matCVProjection[2][3] = 1;
   matCVProjection[3][3] = 1;
+
+  // Lars: debug
+  std::cout << "BuildProjectionFromInstrincics: " << std::endl;
+  std::cout << "near: " << n << std::endl;
+  std::cout << "near: " << f << std::endl;
+
 
   // resulting OpenGL frustum is the product of the orthographic
   // mapping to normalized device coordinates and the augmented camera intrinsic

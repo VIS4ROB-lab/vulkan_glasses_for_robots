@@ -341,10 +341,14 @@ void VRGlassesNode::buildOrthographicProjection(
     float bottom = -1.0 * height/2.0;
     float top = height/2.0;
 
+    std::cout << "Orthographic Projection functions" << std::endl;
     std::cout << "Left: " << left << std::endl;
     std::cout << "Right: " << right << std::endl;
     std::cout << "Bottom: " << bottom << std::endl;
     std::cout << "Top: " << top << std::endl;
+    std::cout << "Near: " << near << std::endl;
+    std::cout << "Far: " << far << std::endl; 
+    
 
     buildOrthographicProjection(orthographic_projection_matrix, left, right, bottom, top, near, far);
 }
@@ -355,8 +359,8 @@ void VRGlassesNode::buildOrthographicProjection(
     glm::mat4 & orthographic_projection_matrix, float left, float right, float bottom, float top, float near, float far) {
 
     glm::mat4 ortho;
-    // ortho = glm::ortho(left, right, bottom, top, near, far);
-    ortho = glm::ortho(left, right, bottom, top);
+    ortho = glm::ortho(left, right, bottom, top, near, far);
+    // ortho = glm::ortho(left, right, bottom, top);
 
     const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
                          0.0f, -1.0f, 0.0f, 0.0f,
