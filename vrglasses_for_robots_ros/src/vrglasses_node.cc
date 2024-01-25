@@ -365,15 +365,15 @@ void VRGlassesNode::buildOrthographicProjection(
 
     std::cout << "Orthographic projection matrix: " << glm::to_string(ortho) << std::endl;
 
-    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
-                         0.0f, -1.0f, 0.0f, 0.0f,
-                         0.0f,  0.0f, 0.5f, 0.0f,
-                         0.0f,  0.0f, 0.5f, 1.0f);
-
     // const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
     //                      0.0f, -1.0f, 0.0f, 0.0f,
-    //                      0.0f,  0.0f, 1.0f, 0.0f,
-    //                      0.0f,  0.0f, 0.0f, 1.0f);
+    //                      0.0f,  0.0f, 0.5f, 0.0f,
+    //                      0.0f,  0.0f, 0.5f, 1.0f);
+
+    const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
+                         0.0f, -1.0f, 0.0f, 0.0f,
+                         0.0f,  0.0f, 1.0f, 0.0f,
+                         0.0f,  0.0f, 0.0f, 1.0f);
 
     orthographic_projection_matrix = clip * ortho;
 }

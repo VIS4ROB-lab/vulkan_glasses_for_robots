@@ -1,3 +1,4 @@
+
 #include <vrglasses_for_robots/vulkan_renderer.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -821,8 +822,10 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
       // std::cout << result_depth_map << std::endl;
 
       // result_depth_map.convertTo(result_depth_map, CV_32F,
-      //                            static_cast<double>( (far_ - near_)),
+      //                            -1.0 * static_cast<double>( (far_ - near_)),
       //                            static_cast<double>(far_ + near_));
+
+      // result_depth_map = (2.0f * far_ * near_) / result_depth_map;
                                  
       
     }
