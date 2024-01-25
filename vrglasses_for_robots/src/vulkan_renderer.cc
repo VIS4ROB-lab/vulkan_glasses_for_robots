@@ -813,7 +813,10 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
 
 
 
-      result_depth_map = ( 2.0 * result_depth_map * (far_ - near_)) + near_ - far_; 
+
+      result_depth_map = (result_depth_map * (far_ - near_)) + near_;
+      
+      // result_depth_map = ( 2.0 * result_depth_map * (far_ - near_)) + near_ - far_; 
 
       // result_depth_map = (((1 + result_depth_map) / 2.0 ) * (far_ - near_)) + near_; 
       
