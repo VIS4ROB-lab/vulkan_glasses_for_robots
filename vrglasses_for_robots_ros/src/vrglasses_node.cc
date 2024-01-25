@@ -68,6 +68,7 @@ void VRGlassesNode::run()
     renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
           visim_project_.h, near_, far_, shader_folder);
     glm::mat4 empty;
+    
     /* LARS: perspective camera, we want orthographic
     buildOpenglProjectionFromIntrinsics(perpective_, empty, 
             visim_project_.w, visim_project_.h, visim_project_.f,
