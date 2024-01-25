@@ -7,6 +7,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/PointCloud.h>
 #include <minkindr_conversions/kindr_msg.h>
+#include <glm/gtx/string_cast.hpp>
 
 
 #define FLAGS_ortho true
@@ -362,10 +363,17 @@ void VRGlassesNode::buildOrthographicProjection(
     ortho = glm::ortho(left, right, bottom, top, near, far);
     // ortho = glm::ortho(left, right, bottom, top);
 
+    std::cout << "Orthographic projection matrix: " << glm::to_string(ortho) << std::endl;
+
     const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
                          0.0f, -1.0f, 0.0f, 0.0f,
                          0.0f,  0.0f, 0.5f, 0.0f,
                          0.0f,  0.0f, 0.5f, 1.0f);
+
+    // const glm::mat4 clip(1.0f,  0.0f, 0.0f, 0.0f,
+    //                      0.0f, -1.0f, 0.0f, 0.0f,
+    //                      0.0f,  0.0f, 1.0f, 0.0f,
+    //                      0.0f,  0.0f, 0.0f, 1.0f);
 
     orthographic_projection_matrix = clip * ortho;
 }
