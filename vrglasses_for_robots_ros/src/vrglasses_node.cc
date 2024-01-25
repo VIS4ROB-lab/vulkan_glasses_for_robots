@@ -83,6 +83,10 @@ void VRGlassesNode::run()
     {
         if(ortho_width != 0)
         {
+
+            nh_private_.param("image_height", visim_project_.h, visim_project_.h);
+            nh_private_.param("image_width", visim_project_.w, visim_project_.w);
+
             std::cout << "Rendered image height: " << visim_project_.h << std::endl;
             std::cout << "Rendered image width: " << visim_project_.w << std::endl;
             
@@ -119,7 +123,7 @@ void VRGlassesNode::run()
     {
         // Load Mesh
         ROS_INFO("Loading single file");
-        renderer_->loadMesh(mesh_obj_file,texture_file);
+        renderer_->loadMesh(mesh_obj_file, texture_file);
         renderer_->noFileScene();
     }
     else{

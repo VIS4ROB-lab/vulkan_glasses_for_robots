@@ -96,8 +96,8 @@ private:
             f = 455;
             cx = 376.5;
             cy = 240.5;
-            w = 752;
-            h = 480;
+            w = 1000; // was 752
+            h = 1000; // was 480
             imu_image_delay = 1;  // nanosec
 
             sampling_factor = 10;

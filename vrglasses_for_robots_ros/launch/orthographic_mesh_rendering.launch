@@ -1,0 +1,30 @@
+<launch>
+
+    <!-- <arg name="mav_name"       default="firefly"/> -->
+    <arg name="enable_logging" default="false" />
+    <!-- <arg name="log_file"       default="$(arg mav_name)" /> -->
+	<arg name="mesh_file" default="1mcube_with_pedestal_top_axis.obj" /> <!-- workspace_mesh.obj -->
+	<arg name="ortho_width" default="3" />
+
+    <arg name="file_obj"       default="$(find mesh_from_depth)/output_mesh/$(arg mesh_file)"/>
+    <arg name="file_texture"   default="$(find mesh_from_depth)/output_mesh/workspace_texture.png"/>
+
+  	<node name="vrglasses_for_robots_ros" pkg="vrglasses_for_robots_ros" type="vrglasses_for_robots_ros" respawn="false" clear_params="true" output="screen">
+	  	<remap from="odometry"         to="/firefly/vi_sensor/ground_truth/odometry" />
+	  	
+  		<param name="framerate"       value="20.0" />
+  		<param name="camera_frame_id" value="vulkan_camera_frame" /> 
+  		<param name="mesh_obj_file"   value="$(arg file_obj)" />
+  		<param name="texture_file"    value="$(arg file_texture)" />
+	  	<param name="shader_folder"   value="$(find vrglasses_for_robots)/shaders" />
+		  
+		<param name="render_far"    value="5.0" /> 
+		<param name="render_near"   value="0.5" />
+
+		<param name="image_height" value="250" />
+		<param name="image_width"  value="400" />
+		  
+	  	<param name="ortho_width"		value="$(arg ortho_width)" />
+  	</node>
+
+</launch>
