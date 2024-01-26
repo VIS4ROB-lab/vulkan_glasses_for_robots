@@ -1,4 +1,3 @@
-
 #include <vrglasses_for_robots/vulkan_renderer.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -787,9 +786,9 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
 
     if (false) {
 
-      std::cout << "Perspective Z read out: " << std::endl;
-      std::cout << "far_ " << far_ << std::endl;
-      std::cout << "near_ " << near_ << std::endl;
+      // std::cout << "Perspective Z read out: " << std::endl;
+      // std::cout << "far_ " << far_ << std::endl;
+      // std::cout << "near_ " << near_ << std::endl;
 
       result_depth_map.convertTo(result_depth_map, CV_32F,
                                  -1.0 * static_cast<double>(far_ - near_),
@@ -799,9 +798,9 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
 
     } else {
 
-      std::cout << "Orthographic Z read out: " << std::endl;
-      std::cout << "far_ " << far_ << std::endl;
-      std::cout << "near_ " << near_ << std::endl;
+      // std::cout << "Orthographic Z read out: " << std::endl;
+      // std::cout << "far_ " << far_ << std::endl;
+      // std::cout << "near_ " << near_ << std::endl;
       
 
       // TODO: 
@@ -860,8 +859,8 @@ void vrglasses_for_robots::VulkanRenderer::saveImageDepthmap(
       // cv::flip(result_depth_map, result_depth_map, 0);
 
 
-      // cv::threshold(result_depth_map, result_depth_map, far_ - 0.0001, far_,
-      //               cv::THRESH_TOZERO_INV);
+      cv::threshold(result_depth_map, result_depth_map, far_ - 0.0001, far_,
+                    cv::THRESH_TOZERO_INV);
     }
     // LOG("Framebuffer image saved to %s\n", filename);
   }
@@ -1284,13 +1283,13 @@ vrglasses_for_robots::VulkanRenderer::VulkanRenderer(
   std::cout << "Running headless rendering example\n";
 
   // Lars debugging stuff
-  std::cout << "-------------------------------------------------------------" << std::endl;
-  std::cout << "vrglasses_for_robots::VulkanRenderer::VulkanRenderer Settings: " << std::endl;
-  std::cout << "width: " << width << std::endl;
-  std::cout << "height: " << height << std::endl;
-  std::cout << "near: " << near_ << std::endl;
-  std::cout << "far: " << far_ << std::endl;
-  std::cout << "-------------------------------------------------------------" << std::endl;
+  // std::cout << "-------------------------------------------------------------" << std::endl;
+  // std::cout << "vrglasses_for_robots::VulkanRenderer::VulkanRenderer Settings: " << std::endl;
+  // std::cout << "width: " << width << std::endl;
+  // std::cout << "height: " << height << std::endl;
+  // std::cout << "near: " << near_ << std::endl;
+  // std::cout << "far: " << far_ << std::endl;
+  // std::cout << "-------------------------------------------------------------" << std::endl;
 
   boost::filesystem::path shader_folder =
       boost::filesystem::path(shader_spv_folder);

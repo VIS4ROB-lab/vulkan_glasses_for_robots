@@ -1,4 +1,3 @@
-
 #include <vrglasses_for_robots_ros/vrglasses_node.h>
 #include <iostream>
 #include <vrglasses_for_robots/vulkan_renderer.h>
@@ -24,6 +23,9 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
     semantic_pub_ = image_transport_.advertise("semantic_map", 1);
 
     camera_odom_pub_ = nh_private_.advertise<nav_msgs::Odometry>("camera_odometry_out", 50);
+
+    nh_private_.param("image_height", visim_project_.h, visim_project_.h);
+    nh_private_.param("image_width", visim_project_.w, visim_project_.w);
 
     //dense_pointcloud_pub_ =
     //        nh_private_.advertise<sensor_msgs::PointCloud>("labelled_dense_pointcloud", 5); //TODO add param to enable the point cloud publication
@@ -83,13 +85,10 @@ void VRGlassesNode::run()
     if(FLAGS_ortho)
     {
         if(ortho_width != 0)
-        {
-
-            nh_private_.param("image_height", visim_project_.h, visim_project_.h);
-            nh_private_.param("image_width", visim_project_.w, visim_project_.w);
-
-            std::cout << "Rendered image height: " << visim_project_.h << std::endl;
-            std::cout << "Rendered image width: " << visim_project_.w << std::endl;
+        {   std::cout << "------------------------------------" << std::endl;
+            std::cout << "VULKAN: Rendered image height: " << visim_project_.h << std::endl;
+            std::cout << "VULKAN: Rendered image width: " << visim_project_.w << std::endl;
+            std::cout << "------------------------------------" << std::endl;
             
             buildOrthographicProjection(perpective_, 
                                         ortho_width, 
@@ -332,7 +331,7 @@ void VRGlassesNode::buildOpenglProjectionFromIntrinsics(glm::mat4 &matPerspectiv
 
 void VRGlassesNode::buildOrthographicProjection(
     glm::mat4 & orthographic_projection_matrix, float width, float height, float near, float far) {
-    std::cout << "Ortho Img Callback" << std::endl;
+    // std::cout << "Ortho Img Callback" << std::endl;
 
     // Old was of doing things
     // float left   = -1.0 * std::floor(width/2.0);
@@ -347,13 +346,13 @@ void VRGlassesNode::buildOrthographicProjection(
     float bottom = -1.0 * height/2.0;
     float top = height/2.0;
 
-    std::cout << "Orthographic Projection functions" << std::endl;
-    std::cout << "Left: " << left << std::endl;
-    std::cout << "Right: " << right << std::endl;
-    std::cout << "Bottom: " << bottom << std::endl;
-    std::cout << "Top: " << top << std::endl;
-    std::cout << "Near: " << near << std::endl;
-    std::cout << "Far: " << far << std::endl; 
+    // std::cout << "Orthographic Projection functions" << std::endl;
+    // std::cout << "Left: " << left << std::endl;
+    // std::cout << "Right: " << right << std::endl;
+    // std::cout << "Bottom: " << bottom << std::endl;
+    // std::cout << "Top: " << top << std::endl;
+    // std::cout << "Near: " << near << std::endl;
+    // std::cout << "Far: " << far << std::endl; 
 
 
     buildOrthographicProjection(orthographic_projection_matrix, left, right, bottom, top, near, far);
