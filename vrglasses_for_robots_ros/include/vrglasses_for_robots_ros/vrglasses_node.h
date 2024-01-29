@@ -44,6 +44,12 @@ private:
     ros::Time last_frame_time_;
 
     std::string camera_frame_id_;
+
+    std::string mesh_obj_file;
+    std::string texture_file;
+
+    std::string shader_folder;
+
     bool initialized_;
 
     // ros

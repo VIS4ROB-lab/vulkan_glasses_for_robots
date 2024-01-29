@@ -55,7 +55,7 @@ VRGlassesNode::VRGlassesNode(const ros::NodeHandle &nh, const ros::NodeHandle &n
 void VRGlassesNode::run()
 {
     // Renderer
-    std::string shader_folder;
+    // std::string shader_folder;
     if (!nh_private_.getParam("shader_folder", shader_folder)) 
     {
         ROS_ERROR("shader_folder not defined");
@@ -65,7 +65,7 @@ void VRGlassesNode::run()
     // ROS Parameters
     nh_private_.param("render_far",far_,far_);    
     
-    nh_private_.param("render_near",near_,near_);    
+    nh_private_.param("render_near",near_, near_);    
 
     renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
           visim_project_.h, near_, far_, shader_folder);
@@ -98,8 +98,8 @@ void VRGlassesNode::run()
         }
     }
 
-    std::string mesh_obj_file;
-    std::string texture_file;
+    // std::string mesh_obj_file;
+    // std::string texture_file;
     std::string model_folder;
     std::string model_list_file;
     std::string model_pose_file;
@@ -122,9 +122,9 @@ void VRGlassesNode::run()
     else if( nh_private_.getParam("mesh_obj_file", mesh_obj_file) && nh_private_.getParam("texture_file", texture_file))
     {
         // Load Mesh
-        ROS_INFO("Loading single file");
-        renderer_->loadMesh(mesh_obj_file, texture_file);
-        renderer_->noFileScene();
+        ROS_INFO("VRGLASSES: Single file mode. Loading mesh on callback.");
+        // renderer_->loadMesh(mesh_obj_file, texture_file);
+        // renderer_->noFileScene();
     }
     else{
         ROS_ERROR("mesh_obj_file and texture_file need to be defined parameter, alternatively model_folder and model_list_file");
@@ -149,6 +149,15 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
 {    
     if( msg.header.stamp - last_frame_time_ >= diff_frames_)
     {
+        // Vulkan renderer declaration
+        //vrglasses_for_robots::VulkanRenderer* renderer_;
+        // Load mesh and texture file
+        ROS_INFO("VRGLASSES: Callback recieved. Rendering scene with given camera pose.");
+
+        // Load mesh & texture file into GPU. 
+        renderer_->loadMesh(mesh_obj_file, texture_file);
+        renderer_->noFileScene();
+
         last_frame_time_ = msg.header.stamp;
         kindr::minimal::QuatTransformation T_WC = computeT_WC(msg.pose.pose);
         glm::mat4 mvp = computeMVP(T_WC);
@@ -178,6 +187,19 @@ void VRGlassesNode::odomCallback(const nav_msgs::Odometry &msg)
         depth_pub_.publish(depth_msg);
 
         //publishDenseSemanticCloud(msg.header,depth_msg,result_s_map_); //TODO add param to enable the point cloud publication
+    
+        // delete renderer to avoid memory leaks.
+        // Then declare new object (instance) of the VulkanRenderer 
+        if (renderer_ != nullptr)
+        {
+            // free(renderer_);
+            delete renderer_;
+            renderer_ = new vrglasses_for_robots::VulkanRenderer(visim_project_.w, 
+                                                                visim_project_.h, 
+                                                                near_, 
+                                                                far_, 
+                                                                shader_folder);
+        }
     }
 }
 
