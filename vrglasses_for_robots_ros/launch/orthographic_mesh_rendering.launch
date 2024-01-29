@@ -4,8 +4,8 @@
     <!-- <arg name="mav_name"       default="firefly"/> -->
     <arg name="enable_logging" default="false" />
     <!-- <arg name="log_file"       default="$(arg mav_name)" /> -->
-	<arg name="mesh_file" default="1mcube_with_pedestal_top_axis.obj" /> <!-- workspace_mesh.obj -->
-	<arg name="ortho_width" default="3" />
+	<arg name="mesh_file" default="workspace_mesh.obj" /> <!-- workspace_mesh.obj -->
+	<arg name="ortho_width" default="2" />
 
     <arg name="file_obj"       default="$(find mesh_from_depth)/output_mesh/$(arg mesh_file)"/>
     <arg name="file_texture"   default="$(find mesh_from_depth)/output_mesh/workspace_texture.png"/>
@@ -20,10 +20,10 @@
 	  	<param name="shader_folder"   value="$(find vrglasses_for_robots)/shaders" />
 		  
 		<param name="render_far"    value="5.0" /> 
-		<param name="render_near"   value="0.5" />
+		<param name="render_near"   value="0.1" />
 
-		<param name="image_height" value="250" />
-		<param name="image_width"  value="400" />
+		<param name="image_height" value="1000" />
+		<param name="image_width"  value="1000" />
 		  
 	  	<param name="ortho_width"		value="$(arg ortho_width)" />
   	</node>

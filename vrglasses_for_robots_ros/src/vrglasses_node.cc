@@ -118,7 +118,7 @@ void VRGlassesNode::run()
             renderer_->noFileScene();
         }
         
-    } 
+    }
     else if( nh_private_.getParam("mesh_obj_file", mesh_obj_file) && nh_private_.getParam("texture_file", texture_file))
     {
         // Load Mesh
