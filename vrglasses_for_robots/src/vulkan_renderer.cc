@@ -13,6 +13,12 @@
 #include <opencv2/imgproc.hpp>
 #include <unordered_map>
 
+/*
+
+  LARS: To select a different device (GPU) go to line 156
+
+*/
+
 uint32_t vrglasses_for_robots::VulkanRenderer::getMemoryTypeIndex(
     uint32_t typeBits, VkMemoryPropertyFlags properties) {
   VkPhysicalDeviceMemoryProperties deviceMemoryProperties;
@@ -156,10 +162,12 @@ void vrglasses_for_robots::VulkanRenderer::initVulkan(bool enableValidation) {
                                              physicalDevices.data()));
   
   
+  
   // LARS trying to use Vulkan on performance gpu (nvidia)
   
   // physicalDevice = physicalDevices[0]; // Intel
-  physicalDevice = physicalDevices[1]; // Nvidia
+  physicalDevice = physicalDevices[0]; // Nvidia
+  // std::cout << "[VULKAN RENDERER] Physical devices (GPU): " << physicalDevices << std::endl;
 
 
 
