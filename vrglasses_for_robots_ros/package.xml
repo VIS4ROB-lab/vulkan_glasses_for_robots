@@ -21,6 +21,4 @@
   <depend>cv_bridge</depend>
   <depend>vrglasses_for_robots</depend>  
   <depend>image_transport</depend>
-  <depend>glog_catkin</depend>
-
 </package>
