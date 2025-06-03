@@ -29,28 +29,28 @@ RUN apt-get update
 
 WORKDIR /root/catkin_ws/
 
-RUN apt-get update \
-    # https://ros.org/reps/rep-2001.html#dev-tools
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \    
+    &&  apt-get install -y --no-install-recommends \
         ros-dev-tools \
         ros-noetic-catkin \
         python3-catkin-tools \
-        python3-pip \
-        nano \
-        ros-noetic-tf-conversions \
-        libgoogle-glog-dev  \
+        python3-pip \        
+        ros-noetic-tf-conversions \        
         python3-wstool  \
         libgoogle-glog-dev  \
-        ros-noetic-mavros-msgs  \
+        ros-noetic-mavros-msgs \
         libgflags-dev \
-        libvulkan-dev  \
-        libglm-dev  \
+        libvulkan-dev \
+        libglm-dev \
         ros-noetic-eigen-conversions \
         libboost-python-dev \
-         python3-dev \
+        python3-dev \
+        nano \
     && rosdep init \
     && rosdep update \
-    && DEBIAN_FRONTEND=noninteractive rosdep install --from-paths src --ignore-src -r -y \
+    && rosdep install --from-paths src --ignore-src -r -y \
     && python3 -m pip install \
         wstool \
     && rm -rf /var/lib/apt/lists/*
